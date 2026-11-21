@@ -112,7 +112,7 @@ Implement the fundamental lifecycle operations.
 - No memory leaks.
 - Correct handling of zero-length vectors.
 - Allocation overflow protection.
-- Failure-safe behavior.
+
 - No use-after-free.
 - Destruction must be safe according to your documented API contract.
 
@@ -279,7 +279,7 @@ Test:
 
 ## **B. Magnitude (L2 norm)**
 
-$  \|\mathbf{v}\|\\_2=\sqrt{^{n-1}\sum_{i=0}\|v_i^2}\ $
+$ \left\| \vec{v} \right\|_2 = \sqrt{v_x^2 + v_y^2 + v_z^2} = \sqrt{\sum_{i=1}^{n-1} v_i^2} $
 
 Example:
 
@@ -360,7 +360,7 @@ $$
 
 ### **Sample variance**
 
-s^2=\frac{1}{n-1}\sum\_{i=1}^{n}(x_i-\bar{x})^2
+$ s^2=\frac{1}{n-1}\sum\_{i=1}^{n}(x_i-\bar{x})^2 $
 
 You must decide how to expose the distinction in your API.
 

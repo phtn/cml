@@ -11,6 +11,16 @@
   },
   {
     "directory": "/Users/xpriori/Code/c/cml",
+    "file": "/Users/xpriori/Code/c/cml/src/math.c",
+    "command": "cc -Wall -Wextra -Wpedantic -Wconversion -Wshadow -std=c11 -Iinclude -c src/math.c -o build/math.o"
+  },
+  {
+    "directory": "/Users/xpriori/Code/c/cml",
+    "file": "/Users/xpriori/Code/c/cml/src/vector.c",
+    "command": "cc -Wall -Wextra -Wpedantic -Wconversion -Wshadow -std=c11 -Iinclude -c src/vector.c -o build/vector.o"
+  },
+  {
+    "directory": "/Users/xpriori/Code/c/cml",
     "file": "/Users/xpriori/Code/c/cml/src/main.c",
     "command": "cc -Wall -Wextra -Wpedantic -Wconversion -Wshadow -std=c11 -Iinclude -c src/main.c -o build/main.o"
   },
@@ -23,5 +33,15 @@
     "directory": "/Users/xpriori/Code/c/cml",
     "file": "/Users/xpriori/Code/c/cml/tests/test_error.c",
     "command": "cc -Wall -Wextra -Wpedantic -Wconversion -Wshadow -std=c11 -Iinclude -c tests/test_error.c -o build/test_error.o"
+  },
+  {
+    "directory": "/Users/xpriori/Code/c/cml",
+    "file": "/Users/xpriori/Code/c/cml/tests/test_vector.c",
+    "command": "cc -Wall -Wextra -Wpedantic -Wconversion -Wshadow -std=c11 -Iinclude -c tests/test_vector.c -o build/test_vector.o"
+  },
+  {
+    "directory": "/Users/xpriori/Code/c/cml",
+    "file": "/Users/xpriori/Code/c/cml/examples/vector_example.c",
+    "command": "cc -Wall -Wextra -Wpedantic -Wconversion -Wshadow -std=c11 -Iinclude -c examples/vector_example.c -o build/vector_example.o"
   }
 ]

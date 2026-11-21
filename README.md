@@ -4,11 +4,14 @@ A from-scratch machine learning library written in C11.
 
 ```
 CML
-├── Memory       → allocates memory safely (Phase 0)
-├── Error        → standardizes failures & logging (Phase 1)
-├── Math         → numerical foundation & tolerances (Phase 2)
-├── Vector       → vector engine & linear algebra (Phase 2)
-├── Matrix       → 2D numerical data structures (Phase 3)
+├── Memory        → allocates memory safely (Phase 0)
+├── Error         → standardizes failures & logging (Phase 1)
+├── Math          → numerical foundation & tolerances (Phase 2)
+├── Vector        → vector engine & linear algebra (Phase 2)
+├── Matrix        → 2D numerical data structures (Phase 3)
+├── Statistics    → descriptive & inferential statistics (Phase 4)
+├── Preprocessing → scaling, imputation, outlier detection (Phase 4)
+├── Dataset       → datasets, shuffling, train/test splitting (Phase 4)
 └── ...
 ```
 
@@ -20,20 +23,93 @@ CML
 # Build default target
 make
 
-# Run all test suites (memory, error, vector)
+# Run all test suites (memory, error, vector, matrix, statistics, preprocessing, dataset)
 make test
 
 # Run specific test suites
 make test-memory
 make test-error
 make test-vector
+make test-matrix
+make test-statistics
+make test-preprocessing
+make test-dataset
 
-# Run the Phase 2 Vector Engine example
+# Run example programs
 make example
+make example-vector
+make example-matrix
+make example-analysis
 
 # Run with AddressSanitizer & UndefinedBehaviorSanitizer
 make sanitize
 ```
+
+---
+
+## Phase 4 · Statistics & Data Processing
+
+Comprises three integrated modules:
+1. **Statistics** ([`include/cml/statistics.h`](include/cml/statistics.h), [`src/statistics.c`](src/statistics.c))
+2. **Preprocessing** ([`include/cml/preprocessing.h`](include/cml/preprocessing.h), [`src/preprocessing.c`](src/preprocessing.c))
+3. **Dataset** ([`include/cml/dataset.h`](include/cml/dataset.h), [`src/dataset.c`](src/dataset.c))
+
+### Key Capabilities
+
+1. **Descriptive Statistics:**
+   - Vector metrics: `cml_stat_sum`, `cml_stat_mean`, `cml_stat_median`, `cml_stat_min`, `cml_stat_max`, `cml_stat_range`.
+   - Numerically stable variance and standard deviation using Welford's algorithm (`cml_stat_variance`, `cml_stat_stddev`).
+   - Order statistics: `cml_stat_percentile`, `cml_stat_quantile`, `cml_stat_quartiles` ($Q_1, Q_2, Q_3$), `cml_stat_iqr`.
+   - Column-wise matrix statistics: `cml_stat_matrix_col_means`, `cml_stat_matrix_col_medians`, `cml_stat_matrix_col_stddev`, `cml_stat_matrix_col_iqr`.
+
+2. **Covariance & Pearson Correlation:**
+   - Sample and population covariance between vectors (`cml_stat_covariance`).
+   - Pearson correlation coefficient $r \in [-1, 1]$ (`cml_stat_correlation`).
+   - Pairwise covariance and correlation matrices for datasets (`cml_stat_covariance_matrix`, `cml_stat_correlation_matrix`).
+
+3. **Data Quality & Missing Value Imputation:**
+   - Detection: `cml_prep_count_nan`, `cml_prep_count_inf`, `cml_prep_count_nonfinite`, `cml_prep_is_finite`.
+   - Imputation strategies: constant replacement, mean imputation, median imputation, and removal of invalid rows.
+
+4. **Outlier Detection & Handling:**
+   - Interquartile Range (IQR) method: $[Q_1 - k \cdot IQR, Q_3 + k \cdot IQR]$.
+   - Z-score method: $|z| > \text{threshold}$.
+   - Handling: Winsorization (`cml_prep_winsorize`), median replacement (`cml_prep_outliers_replace_median`).
+
+5. **Feature Scalers (Data Leakage Prevention):**
+   - Implements strict `fit` and `transform` interfaces.
+   - `CMLMinMaxScaler`: maps features to $[a, b]$, handles constant features.
+   - `CMLStandardScaler`: transforms to zero mean and unit variance ($z = (x - \mu) / \sigma$).
+   - `CMLRobustScaler`: centers by median and scales by IQR.
+   - Inverse transformation support for all scalers.
+   - `CMLPipeline`: sequential chaining of imputation, clipping, and scaling.
+
+6. **Dataset Architecture & Splitting:**
+   - `CMLDataset`: encapsulates feature matrix $X$ and target vector $y$ with metadata.
+   - Reproducible Fisher-Yates shuffling (`cml_dataset_shuffle`) with explicit 64-bit seed.
+   - Disjoint train/validation/test splitting (`cml_dataset_split`) preserving feature-target alignment.
+   - CSV dataset loader (`cml_dataset_from_csv`) and exporter (`cml_dataset_to_csv`).
+
+---
+
+## Phase 3 · Matrix Engine
+
+Declared in [`include/cml/matrix.h`](include/cml/matrix.h), implemented in [`src/matrix.c`](src/matrix.c).
+
+### `CMLMatrix` Structure
+
+```c
+typedef struct CMLMatrix {
+    double *data;     /* contiguous dynamically allocated row-major array */
+    size_t rows;      /* number of rows */
+    size_t cols;      /* number of columns */
+    size_t capacity;  /* allocated buffer capacity in elements */
+} CMLMatrix;
+```
+
+**Memory Layout:**
+Contiguous row-major storage. Element at row $r$ and column $c$ is indexed linearly via:
+$$\text{index} = r \times \text{cols} + c$$
 
 ---
 
@@ -50,41 +126,6 @@ typedef struct CMLVector {
     size_t capacity;  /* allocated buffer capacity */
 } CMLVector;
 ```
-
-### Key Capabilities
-
-1. **Lifecycle & Memory Safety:**
-   - `cml_vector_create(size)` — allocates contiguous memory zero-initialized via `cml_calloc`.
-   - `cml_vector_create_filled(size, value)` — creates vector filled with `value`.
-   - `cml_vector_from_array(arr, size)` — creates vector from raw C array.
-   - `cml_vector_clone(src)` — deep copy with independent storage.
-   - `cml_vector_resize(vec, new_size)` — safe reallocation preserving data; zeroes new elements.
-   - `cml_vector_clear(vec)` — resets length to 0 while keeping capacity for reuse.
-   - `cml_vector_destroy(vec)` — safely releases buffer and vector header.
-
-2. **Element Access & Mutation:**
-   - `cml_vector_get`, `cml_vector_set` — bounds-checked access returning `CML_ERROR_INDEX_OUT_OF_BOUNDS`.
-   - `cml_vector_fill` — fills all elements.
-   - `cml_vector_swap` — swaps two elements with bounds checking.
-
-3. **Arithmetic Operations (Safe Aliasing Supported):**
-   - Addition (`cml_vector_add`), Subtraction (`cml_vector_sub`), Element-wise multiplication (`cml_vector_mul`).
-   - Element-wise division (`cml_vector_div`) with division-by-zero detection returning `CML_ERROR_NUMERICAL`.
-   - Scalar operations: `cml_vector_scale`, `cml_vector_add_scalar`, `cml_vector_negate`.
-   - In-place variations: `cml_vector_add_inplace`, `cml_vector_sub_inplace`, etc.
-   - Allocating helpers: `cml_vector_add_new`, `cml_vector_sub_new`, etc.
-
-4. **Advanced Operations & Norms:**
-   - Dot product (`cml_vector_dot`): $\mathbf{a} \cdot \mathbf{b} = \sum a_i b_i$.
-   - L1 norm (`cml_vector_norm_l1`): $\sum |v_i|$.
-   - L2 Euclidean magnitude (`cml_vector_norm_l2`, `cml_vector_norm`): $\sqrt{\sum v_i^2}$.
-   - Infinity norm (`cml_vector_norm_inf`): $\max |v_i|$.
-   - Normalization (`cml_vector_normalize`): $\hat{\mathbf{v}} = \mathbf{v} / \|\mathbf{v}\|_2$ (returns `CML_ERROR_NUMERICAL` on zero-vector).
-
-5. **Descriptive Statistics:**
-   - `cml_vector_sum`, `cml_vector_mean`, `cml_vector_min`, `cml_vector_max`.
-   - `cml_vector_variance_pop` & `cml_vector_variance_sample` (divisors $n$ vs $n-1$).
-   - `cml_vector_stddev_pop` & `cml_vector_stddev_sample`.
 
 ---
 

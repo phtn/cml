@@ -27,22 +27,23 @@
 
 /* ===========================================================================
  * CMLStatus — standardized error codes
- * ========================================================================= */
+ * ------------------------------------------------------------------------------
+ */
 
 typedef enum CMLStatus {
-    CML_SUCCESS                   = 0,
-    CML_ERROR_INVALID_ARGUMENT    = 1,
-    CML_ERROR_OUT_OF_MEMORY       = 2,
-    CML_ERROR_OVERFLOW            = 3,
-    CML_ERROR_INVALID_DIMENSION   = 4,
-    CML_ERROR_INDEX_OUT_OF_BOUNDS = 5,
-    CML_ERROR_IO                  = 6,
-    CML_ERROR_NUMERICAL           = 7,
-    CML_ERROR_NOT_IMPLEMENTED     = 8,
-    CML_ERROR_UNKNOWN             = 9,
+  CML_SUCCESS = 0,
+  CML_ERROR_INVALID_ARGUMENT = 1,
+  CML_ERROR_OUT_OF_MEMORY = 2,
+  CML_ERROR_OVERFLOW = 3,
+  CML_ERROR_INVALID_DIMENSION = 4,
+  CML_ERROR_INDEX_OUT_OF_BOUNDS = 5,
+  CML_ERROR_IO = 6,
+  CML_ERROR_NUMERICAL = 7,
+  CML_ERROR_NOT_IMPLEMENTED = 8,
+  CML_ERROR_UNKNOWN = 9,
 } CMLStatus;
 
-/* ---------------------------------------------------------------------------
+/* ==============================================================================
  * cml_status_string
  *
  * Convert a CMLStatus code into a human-readable, statically allocated string.
@@ -56,19 +57,21 @@ typedef enum CMLStatus {
  *   or modify the returned string.
  *
  * Memory: allocates nothing.
- * --------------------------------------------------------------------------- */
+ * ---------------------------------------------------------------------------
+ */
 const char *cml_status_string(CMLStatus status);
 
 /* ===========================================================================
  * CMLLogLevel — severity levels
- * ========================================================================= */
+ * ------------------------------------------------------------------------------
+ */
 
 typedef enum CMLLogLevel {
-    CML_LOG_DEBUG = 0,
-    CML_LOG_INFO  = 1,
-    CML_LOG_WARN  = 2,
-    CML_LOG_ERROR = 3,
-    CML_LOG_FATAL = 4,
+  CML_LOG_DEBUG = 0,
+  CML_LOG_INFO = 1,
+  CML_LOG_WARN = 2,
+  CML_LOG_ERROR = 3,
+  CML_LOG_FATAL = 4,
 } CMLLogLevel;
 
 /* ---------------------------------------------------------------------------
@@ -88,11 +91,12 @@ typedef enum CMLLogLevel {
  *   ...    — format arguments.
  *
  * Returns: nothing. Logging never crashes the application.
- * --------------------------------------------------------------------------- */
+ * ---------------------------------------------------------------------------
+ */
 void cml_log(CMLLogLevel level, const char *fmt, ...)
     __attribute__((format(printf, 2, 3)));
 
-/* ---------------------------------------------------------------------------
+/* ===========================================================================
  * cml_log_set_level
  *
  * Set the minimum severity level for log output.
@@ -100,10 +104,11 @@ void cml_log(CMLLogLevel level, const char *fmt, ...)
  *
  * Parameters:
  *   level — new minimum level; invalid values are silently ignored.
- * --------------------------------------------------------------------------- */
+ * ---------------------------------------------------------------------------
+ */
 void cml_log_set_level(CMLLogLevel level);
 
-/* ---------------------------------------------------------------------------
+/* ===========================================================================
  * cml_log_set_file
  *
  * Open `path` in append mode and direct all future log output to it
@@ -117,15 +122,17 @@ void cml_log_set_level(CMLLogLevel level);
  *   CML_SUCCESS              — file opened successfully.
  *   CML_ERROR_INVALID_ARGUMENT — path is NULL or empty.
  *   CML_ERROR_IO             — fopen failed (file not opened).
- * --------------------------------------------------------------------------- */
+ * ---------------------------------------------------------------------------
+ */
 CMLStatus cml_log_set_file(const char *path);
 
-/* ---------------------------------------------------------------------------
+/* ===========================================================================
  * cml_log_close_file
  *
  * Flush and close the current log file, if any.
  * Safe to call when no file is open (no-op).
- * --------------------------------------------------------------------------- */
+ * ---------------------------------------------------------------------------
+ */
 void cml_log_close_file(void);
 
 #endif /* CML_ERROR_H */

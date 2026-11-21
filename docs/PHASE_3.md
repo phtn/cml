@@ -6,8 +6,6 @@ Matrices are the backbone of machine learning. Neural network layers, datasets, 
 
 You'll build this from scratch in C, using your own memory, error-handling, and vector modules.
 
-[Linear Algebra - Matrices | Mathematical Foundations](https://images.openai.com/static-rsc-4/zAfgLYlmZGkIh4u-C71xsV9ph-W7bleiJmHiiKdOCTfIHRNLsiGxbMh6l1ApDkQ32EYy_UGJQEXpn5_SRSAFs0gHP-2zBpSJjgRS1tx_M4oP9I_jKAG4gbr7kte-Z3XpnitaElGVVlnSe4XW5R-3QpRTqUSyZ4gd8-0ohVXm2Tc?purpose=inline)
-
 **Difficulty:** Intermediate → Advanced
 
 **Estimated time:** 2–3 weeks
@@ -78,7 +76,7 @@ A matrix represents a two-dimensional collection of values.
 
 For example:
 
-\\[ A= \begin{bmatrix} 1&2&3\\\ 4&5&6 \end{bmatrix} \\]
+$A= \begin{bmatrix} 1&2&3\\\ 4&5&6 \end{bmatrix}$
 
 It has:
 
@@ -109,7 +107,7 @@ For this assignment, use **row-major contiguous memory**.
 
 That means the matrix:
 
-\\[ \begin{bmatrix} 1&2&3\\\ 4&5&6 \end{bmatrix} \\]
+$\begin{bmatrix} 1&2&3\\\ 4&5&6 \end{bmatrix}$
 
 is stored internally as:
 
@@ -119,7 +117,7 @@ is stored internally as:
 
 The element at row `r`, column `c` can be located using:
 
-\\[ \text{index}=r\times\text{cols}+c \\]
+$\text{index}=r\times\text{cols}+c$
 
 For example:
 
@@ -196,7 +194,7 @@ Implement these operations:
 
 Example matrix:
 
-\\[ A= \begin{bmatrix} 10&20&30\\\ 40&50&60 \end{bmatrix} \\]
+$A= \begin{bmatrix} 10&20&30\\\ 40&50&60 \end{bmatrix}$
 
 Expected:
 
@@ -234,11 +232,11 @@ Implement the fundamental operations.
 
 ## **A. Matrix addition**
 
-\\[ C=A+B \\]
+$C=A+B$
 
 Example:
 
-\\[ \begin{bmatrix}1&2\\\3&4\end{bmatrix}+\begin{bmatrix}5&6\\\7&8\end{bmatrix}=\begin{bmatrix}6&8\\\10&12\end{bmatrix} \\]
+$\begin{bmatrix}1&2\\3&4\end{bmatrix}+\begin{bmatrix}5&6\\7&8\end{bmatrix}=\begin{bmatrix}6&8\\10&12\end{bmatrix} $
 
 Requirements:
 
@@ -249,41 +247,41 @@ Requirements:
 
 ## **B. Matrix subtraction**
 
-\\[ C=A-B \\]
+$C=A-B$
 
 Example:
 
-\\[ \begin{bmatrix} 10&20\\\ 30&40 \end{bmatrix} - \begin{bmatrix} 1&2\\\ 3&4 \end{bmatrix} = \begin{bmatrix} 9&18\\\ 27&36 \end{bmatrix} \\]
+$\begin{bmatrix} 10&20\\\ 30&40 \end{bmatrix} - \begin{bmatrix} 1&2\\\ 3&4 \end{bmatrix} = \begin{bmatrix} 9&18\\\ 27&36 \end{bmatrix}$
 
 ## **C. Element-wise multiplication**
 
-\\[ C\_{ij}=A\_{ij}B\_{ij} \\]
+$C\_{ij}=A\_{ij}B\_{ij}$
 
 This is also known as the Hadamard product.
 
 ## **D. Element-wise division**
 
-\\[ C\_{ij}=\frac{A\_{ij}}{B\_{ij}} \\]
+$C\_{ij}=\frac{A\_{ij}}{B\_{ij}}$
 
 Define your division-by-zero behavior.
 
 ## **E. Scalar multiplication**
 
-\\[ C=\alpha A \\]
+$C=\alpha A$
 
 Example:
 
-\\[ 3 \begin{bmatrix} 1&2\\\ 3&4 \end{bmatrix} = \begin{bmatrix} 3&6\\\ 9&12 \end{bmatrix} \\]
+$3 \begin{bmatrix} 1&2\\\ 3&4 \end{bmatrix} = \begin{bmatrix} 3&6\\\ 9&12 \end{bmatrix}$
 
 ## **F. Scalar addition**
 
-\\[ C=A+\alpha \\]
+$C=A+\alpha$
 
 Every matrix element receives the scalar.
 
 ## **G. Negation**
 
-\\[ C=-A \\]
+$C=-A$
 
 # **6. Matrix multiplication — the core challenge**
 
@@ -293,41 +291,41 @@ Unlike element-wise multiplication, matrix multiplication involves summing produ
 
 For:
 
-\\[ A\in\mathbb{R}^{m\times n} \\]
+$A\in\mathbb{R}^{m\times n}$
 
 and:
 
-\\[ B\in\mathbb{R}^{n\times p} \\]
+$B\in\mathbb{R}^{n\times p}$
 
 the result is:
 
-\\[ C=AB\in\mathbb{R}^{m\times p} \\]
+$C=AB\in\mathbb{R}^{m\times p}$
 
 The dimensions must satisfy:
 
-\\[ \boxed{\text{A.columns}=\text{B.rows}} \\]
+$\boxed{\text{A.columns}=\text{B.rows}}$
 
 The resulting dimensions are:
 
-\\[ \boxed{\text{C.rows}=\text{A.rows}} \\]
+$\boxed{\text{C.rows}=\text{A.rows}}$
 
-\\[ \boxed{\text{C.columns}=\text{B.columns}} \\]
+$\boxed{\text{C.columns}=\text{B.columns}}$
 
 ## **Example**
 
-\\[ \begin{bmatrix}1&2&3\\\4&5&6\end{bmatrix}\begin{bmatrix}7&8\\\9&10\\\11&12\end{bmatrix}=\begin{bmatrix}58&64\\\139&154\end{bmatrix} \\]
+$\begin{bmatrix}1&2&3\\4&5&6\end{bmatrix}\begin{bmatrix}7&8\\9&10\\11&12\end{bmatrix}=\begin{bmatrix}58&64\\139&154\end{bmatrix}$
 
 ### **How to calculate the first element**
 
-\\[ C\_{00}=(1\times7)+(2\times9)+(3\times11) \\]
+$C\_{00}=(1\times7)+(2\times9)+(3\times11)$
 
-\\[ C\_{00}=7+18+33=58 \\]
+$C\_{00}=7+18+33=58$
 
 ### **How to calculate the second element**
 
-\\[ C\_{01}=(1\times8)+(2\times10)+(3\times12) \\]
+$C\_{01}=(1\times8)+(2\times10)+(3\times12)$
 
-\\[ C\_{01}=8+20+36=64 \\]
+$C\_{01}=8+20+36=64$
 
 Continue the same process for every element.
 
@@ -358,11 +356,11 @@ For row-major storage, consider why accessing elements sequentially may be more 
 
 Transpose swaps the rows and columns of a matrix.
 
-\\[ A^T\_{ij}=A\_{ji} \\]
+$A^T\_{ij}=A\_{ji}$
 
 Example:
 
-\\[ \begin{bmatrix}1&2&3\\\4&5&6\end{bmatrix}^{T}=\begin{bmatrix}1&4\\\2&5\\\3&6\end{bmatrix} \\]
+$\begin{bmatrix}1&2&3\\4&5&6\end{bmatrix}^{T}=\begin{bmatrix}1&4\\2&5\\3&6\end{bmatrix}$
 
 Implement:
 
@@ -380,7 +378,7 @@ Implement:
 
 Mathematical property:
 
-\\[ (A^T)^T=A \\]
+$(A^T)^T=A$
 
 This is an excellent property-based test.
 
@@ -399,19 +397,19 @@ Implement operations that manipulate complete rows or columns.
 
 Example:
 
-\\[ A= \begin{bmatrix} 1&2&3\\\ 4&5&6\\\ 7&8&9 \end{bmatrix} \\]
+$A= \begin{bmatrix} 1&2&3\\\ 4&5&6\\\ 7&8&9 \end{bmatrix}$
 
 Extract row 1:
 
-\\[ [4,5,6] \\]
+$[4,5,6]$
 
 Extract column 2:
 
-\\[ [3,6,9] \\]
+$[3,6,9]$
 
 Swap row 0 and row 2:
 
-\\[ \begin{bmatrix} 7&8&9\\\ 4&5&6\\\ 1&2&3 \end{bmatrix} \\]
+$\begin{bmatrix} 7&8&9\\\ 4&5&6\\\ 1&2&3 \end{bmatrix}$
 
 ### **Test cases**
 
@@ -430,29 +428,29 @@ This operation bridges your vector and matrix engines.
 
 Given:
 
-\\[ A\in\mathbb{R}^{m\times n} \\]
+$A\in\mathbb{R}^{m\times n}$
 
 and:
 
-\\[ \mathbf{x}\in\mathbb{R}^{n} \\]
+$\mathbf{x}\in\mathbb{R}^{n}$
 
 the result is:
 
-\\[ \mathbf{y}=A\mathbf{x} \\]
+$\mathbf{y}=A\mathbf{x}$
 
 where:
 
-\\[ \mathbf{y}\in\mathbb{R}^{m} \\]
+$\mathbf{y}\in\mathbb{R}^{m}$
 
 Example:
 
-\\[ \begin{bmatrix}1&2&3\\\4&5&6\end{bmatrix}\begin{bmatrix}2\\\3\\\4\end{bmatrix}=\begin{bmatrix}20\\\47\end{bmatrix} \\]
+$\begin{bmatrix}1&2&3\\4&5&6\end{bmatrix}\begin{bmatrix}2\\3\\4\end{bmatrix}=\begin{bmatrix}20\\47\end{bmatrix}$
 
 Calculation:
 
-\\[ y_0=1(2)+2(3)+3(4)=20 \\]
+$y_0=1(2)+2(3)+3(4)=20$
 
-\\[ y_1=4(2)+5(3)+6(4)=47 \\]
+$y_1=4(2)+5(3)+6(4)=47$
 
 Implement:
 
@@ -472,19 +470,19 @@ Implement:
 
 For example:
 
-\\[ A= \begin{bmatrix} 1&2&3\\\ 4&5&6\\\ 7&8&9 \end{bmatrix} \\]
+$A= \begin{bmatrix} 1&2&3\\\ 4&5&6\\\ 7&8&9 \end{bmatrix}$
 
 Diagonal:
 
-\\[ [1,5,9] \\]
+$[1,5,9]$
 
 Trace:
 
-\\[ \operatorname{tr}(A)=1+5+9=15 \\]
+$\operatorname{tr}(A)=1+5+9=15$
 
 For non-square matrices, the diagonal length should be:
 
-\\[ \min(\text{rows},\text{columns}) \\]
+$\min(\text{rows},\text{columns})$
 
 # **11. Matrix statistics**
 
@@ -504,13 +502,13 @@ Implement:
 
 The Frobenius norm is:
 
-\\[ \\|A\\|\_F=\sqrt{\sum\_{i=0}^{m-1}\sum\_{j=0}^{n-1}A\_{ij}^2} \\]
+$\\|A\\|\_F=\sqrt{\sum\_{i=0}^{m-1}\sum\_{j=0}^{n-1}A\_{ij}^2}$
 
 For example:
 
-\\[ A= \begin{bmatrix} 1&2\\\ 3&4 \end{bmatrix} \\]
+$A= \begin{bmatrix} 1&2\\\ 3&4 \end{bmatrix}$
 
-\\[ \\|A\\|\_F=\sqrt{30} \\]
+$\\|A\\|\_F=\sqrt{30}$
 
 # **12. Matrix properties**
 
@@ -534,11 +532,11 @@ Implement functions that determine whether a matrix satisfies certain properties
 
 ## **Symmetric matrix**
 
-\\[ A=A^T \\]
+$A=A^T$
 
 Example:
 
-\\[ \begin{bmatrix} 1&2&3\\\ 2&4&5\\\ 3&5&6 \end{bmatrix} \\]
+$\begin{bmatrix} 1&2&3\\\ 2&4&5\\\ 3&5&6 \end{bmatrix}$
 
 This matrix is symmetric.
 
@@ -567,11 +565,11 @@ Example:
 
 Extract rows 1–2 and columns 1–2 from:
 
-\\[ \begin{bmatrix} 1&2&3&4\\\ 5&6&7&8\\\ 9&10&11&12\\\ 13&14&15&16 \end{bmatrix} \\]
+$\begin{bmatrix} 1&2&3&4\\\ 5&6&7&8\\\ 9&10&11&12\\\ 13&14&15&16 \end{bmatrix}$
 
 Result:
 
-\\[ \begin{bmatrix} 6&7\\\ 10&11 \end{bmatrix} \\]
+$\begin{bmatrix} 6&7\\\ 10&11 \end{bmatrix}$
 
 ## **C. Concatenation**
 
@@ -767,11 +765,11 @@ actual == expected
 
 Use a test that checks:
 
-\\[ |actual-expected|\leq\epsilon \\]
+$|actual-expected|\leq\epsilon$
 
 For example:
 
-\\[ \epsilon=10^{-9} \\]
+$\epsilon=10^{-9}$
 
 Consider whether the tolerance should scale with the magnitude of the values.
 

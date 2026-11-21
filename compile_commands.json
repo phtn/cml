@@ -21,6 +21,26 @@
   },
   {
     "directory": "/Users/xpriori/Code/c/cml",
+    "file": "/Users/xpriori/Code/c/cml/src/matrix.c",
+    "command": "cc -Wall -Wextra -Wpedantic -Wconversion -Wshadow -std=c11 -Iinclude -c src/matrix.c -o build/matrix.o"
+  },
+  {
+    "directory": "/Users/xpriori/Code/c/cml",
+    "file": "/Users/xpriori/Code/c/cml/src/statistics.c",
+    "command": "cc -Wall -Wextra -Wpedantic -Wconversion -Wshadow -std=c11 -Iinclude -c src/statistics.c -o build/statistics.o"
+  },
+  {
+    "directory": "/Users/xpriori/Code/c/cml",
+    "file": "/Users/xpriori/Code/c/cml/src/preprocessing.c",
+    "command": "cc -Wall -Wextra -Wpedantic -Wconversion -Wshadow -std=c11 -Iinclude -c src/preprocessing.c -o build/preprocessing.o"
+  },
+  {
+    "directory": "/Users/xpriori/Code/c/cml",
+    "file": "/Users/xpriori/Code/c/cml/src/dataset.c",
+    "command": "cc -Wall -Wextra -Wpedantic -Wconversion -Wshadow -std=c11 -Iinclude -c src/dataset.c -o build/dataset.o"
+  },
+  {
+    "directory": "/Users/xpriori/Code/c/cml",
     "file": "/Users/xpriori/Code/c/cml/src/main.c",
     "command": "cc -Wall -Wextra -Wpedantic -Wconversion -Wshadow -std=c11 -Iinclude -c src/main.c -o build/main.o"
   },
@@ -41,7 +61,37 @@
   },
   {
     "directory": "/Users/xpriori/Code/c/cml",
+    "file": "/Users/xpriori/Code/c/cml/tests/test_matrix.c",
+    "command": "cc -Wall -Wextra -Wpedantic -Wconversion -Wshadow -std=c11 -Iinclude -c tests/test_matrix.c -o build/test_matrix.o"
+  },
+  {
+    "directory": "/Users/xpriori/Code/c/cml",
+    "file": "/Users/xpriori/Code/c/cml/tests/test_statistics.c",
+    "command": "cc -Wall -Wextra -Wpedantic -Wconversion -Wshadow -std=c11 -Iinclude -c tests/test_statistics.c -o build/test_statistics.o"
+  },
+  {
+    "directory": "/Users/xpriori/Code/c/cml",
+    "file": "/Users/xpriori/Code/c/cml/tests/test_preprocessing.c",
+    "command": "cc -Wall -Wextra -Wpedantic -Wconversion -Wshadow -std=c11 -Iinclude -c tests/test_preprocessing.c -o build/test_preprocessing.o"
+  },
+  {
+    "directory": "/Users/xpriori/Code/c/cml",
+    "file": "/Users/xpriori/Code/c/cml/tests/test_dataset.c",
+    "command": "cc -Wall -Wextra -Wpedantic -Wconversion -Wshadow -std=c11 -Iinclude -c tests/test_dataset.c -o build/test_dataset.o"
+  },
+  {
+    "directory": "/Users/xpriori/Code/c/cml",
     "file": "/Users/xpriori/Code/c/cml/examples/vector_example.c",
     "command": "cc -Wall -Wextra -Wpedantic -Wconversion -Wshadow -std=c11 -Iinclude -c examples/vector_example.c -o build/vector_example.o"
+  },
+  {
+    "directory": "/Users/xpriori/Code/c/cml",
+    "file": "/Users/xpriori/Code/c/cml/examples/matrix_example.c",
+    "command": "cc -Wall -Wextra -Wpedantic -Wconversion -Wshadow -std=c11 -Iinclude -c examples/matrix_example.c -o build/matrix_example.o"
+  },
+  {
+    "directory": "/Users/xpriori/Code/c/cml",
+    "file": "/Users/xpriori/Code/c/cml/examples/data_analysis_example.c",
+    "command": "cc -Wall -Wextra -Wpedantic -Wconversion -Wshadow -std=c11 -Iinclude -c examples/data_analysis_example.c -o build/data_analysis_example.o"
   }
 ]

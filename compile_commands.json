@@ -1,0 +1,17 @@
+[
+  {
+    "directory": "/Users/xpriori/Code/c/cml",
+    "file": "/Users/xpriori/Code/c/cml/src/memory.c",
+    "command": "cc -Wall -Wextra -Wpedantic -Wconversion -Wshadow -std=c11 -Iinclude -c src/memory.c -o build/memory.o"
+  },
+  {
+    "directory": "/Users/xpriori/Code/c/cml",
+    "file": "/Users/xpriori/Code/c/cml/src/main.c",
+    "command": "cc -Wall -Wextra -Wpedantic -Wconversion -Wshadow -std=c11 -Iinclude -c src/main.c -o build/main.o"
+  },
+  {
+    "directory": "/Users/xpriori/Code/c/cml",
+    "file": "/Users/xpriori/Code/c/cml/tests/test_memory.c",
+    "command": "cc -Wall -Wextra -Wpedantic -Wconversion -Wshadow -std=c11 -Iinclude -c tests/test_memory.c -o build/test_memory.o"
+  }
+]

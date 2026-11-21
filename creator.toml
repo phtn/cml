@@ -1,0 +1,18 @@
+[project]
+name = "cml"
+version = "0.1.0"
+standard = "c11"
+compiler = "cc"
+
+[build]
+src_dirs = ["src"]
+include_dirs = ["include"]
+cflags = ["-Wall", "-Wextra", "-pedantic"]
+output = "build/cml"
+
+[test]
+framework = "custom"
+test_dir = "tests"
+
+[release]
+archive_format = "tar.gz"

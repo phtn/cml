@@ -19,5 +19,6 @@
 #include "cml/metrics.h"
 #include "cml/multiclass.h"
 #include "cml/network.h"
+#include "cml/serialization.h"
 
 #endif /* CML_H */

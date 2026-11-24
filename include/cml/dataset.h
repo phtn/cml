@@ -116,6 +116,26 @@ CMLStatus cml_dataset_split_stratified(const CMLDataset *src,
                                        uint64_t seed, CMLDataset **out_train,
                                        CMLDataset **out_test);
 
+/* Fold numbers are zero based. With the same seed, each sample appears in
+ * exactly one test fold. Both output datasets are independently owned. */
+CMLStatus cml_dataset_kfold_split(const CMLDataset *src, size_t folds,
+                                  size_t fold, bool shuffle, uint64_t seed,
+                                  CMLDataset **out_train,
+                                  CMLDataset **out_test);
+
+typedef struct CMLBatchIterator CMLBatchIterator;
+/* Uses sample indices. The iterator owns the sequence and does not own data. */
+CMLBatchIterator *cml_batch_iterator_create(size_t samples, size_t batch_size,
+                                            bool shuffle, uint64_t seed);
+void cml_batch_iterator_destroy(CMLBatchIterator *iterator);
+CMLStatus cml_batch_iterator_reset(CMLBatchIterator *iterator, bool shuffle,
+                                   uint64_t seed);
+/* On success, a count of zero indicates exhaustion. Indices are borrowed
+ * until reset or destruction. The final batch may be smaller than batch_size.
+ */
+CMLStatus cml_batch_iterator_next(CMLBatchIterator *iterator,
+                                  const size_t **indices, size_t *count);
+
 /* ==============================================================================
  * CSV Dataset Loader & Exporter
  * ------------------------------------------------------------------------------

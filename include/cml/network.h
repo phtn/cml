@@ -5,6 +5,7 @@
 #include "cml/optimizer.h"
 
 #include <stdint.h>
+#include <stdio.h>
 
 typedef enum CMLActivation {
   CML_ACTIVATION_NONE,
@@ -29,6 +30,7 @@ size_t cml_network_input_size(const CMLNetwork *network);
 size_t cml_network_output_size(const CMLNetwork *network);
 size_t cml_network_layer_count(const CMLNetwork *network);
 size_t cml_network_parameter_count(const CMLNetwork *network);
+CMLStatus cml_network_summary(const CMLNetwork *network, FILE *stream);
 CMLStatus cml_network_layer_config(const CMLNetwork *network, size_t layer,
                                    CMLDenseConfig *out);
 

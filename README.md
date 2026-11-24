@@ -47,6 +47,7 @@ make test-logistic
 make test-network
 make test-backpropagation
 make test-advanced-optimizers
+make test-models
 
 # Run example programs
 make example
@@ -55,10 +56,22 @@ make example-matrix
 make example-analysis
 make example-linear-regression
 make example-xor
+make example-model-workflow
 
 # Run with AddressSanitizer & UndefinedBehaviorSanitizer
 make sanitize
 ```
+
+---
+
+## Phase 11 · Evaluation and Persistence
+
+Use regression metrics, binary and multiclass reports, ROC-AUC, stratified
+splitting, k-fold splits, and partial-batch iteration. Save and reload linear,
+binary logistic, multiclass, and dense network models in a versioned binary
+format. The workflow example fits preprocessing on the training set, chooses
+its threshold on validation data, and checks that reloaded predictions match on
+held-out data. [Phase 11 guide](docs/PHASE_11.md)
 
 ---
 

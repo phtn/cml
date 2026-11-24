@@ -29,14 +29,16 @@ TEST_LOGISTIC       = $(BUILD_DIR)/test_logistic
 TEST_NETWORK        = $(BUILD_DIR)/test_network
 TEST_BACKPROP       = $(BUILD_DIR)/test_backpropagation
 TEST_ADVANCED       = $(BUILD_DIR)/test_advanced_optimizers
+TEST_MODELS         = $(BUILD_DIR)/test_models
 
 EXAMPLE_VEC = $(BUILD_DIR)/vector_example
 EXAMPLE_MAT = $(BUILD_DIR)/matrix_example
 EXAMPLE_DAT = $(BUILD_DIR)/data_analysis_example
 EXAMPLE_REG = $(BUILD_DIR)/linear_regression_example
 EXAMPLE_XOR = $(BUILD_DIR)/xor_example
+EXAMPLE_WORKFLOW = $(BUILD_DIR)/model_workflow
 
-.PHONY: all clean test test-memory test-error test-vector test-matrix test-statistics test-preprocessing test-dataset test-linear-regression test-loss test-optimizer test-classification test-activation test-logistic test-network test-backpropagation test-advanced-optimizers example example-vector example-matrix example-analysis example-linear-regression example-xor sanitize
+.PHONY: all clean test test-memory test-error test-vector test-matrix test-statistics test-preprocessing test-dataset test-linear-regression test-loss test-optimizer test-classification test-activation test-logistic test-network test-backpropagation test-advanced-optimizers test-models example example-vector example-matrix example-analysis example-linear-regression example-xor example-model-workflow sanitize
 
 all: $(TARGET)
 
@@ -47,7 +49,7 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 # --- Test targets ---
-test: test-memory test-error test-vector test-matrix test-statistics test-preprocessing test-dataset test-linear-regression test-loss test-optimizer test-classification test-activation test-logistic test-network test-backpropagation test-advanced-optimizers
+test: test-memory test-error test-vector test-matrix test-statistics test-preprocessing test-dataset test-linear-regression test-loss test-optimizer test-classification test-activation test-logistic test-network test-backpropagation test-advanced-optimizers test-models
 
 test-memory: $(TEST_MEMORY)
 	./$(TEST_MEMORY)
@@ -145,8 +147,14 @@ test-advanced-optimizers: $(TEST_ADVANCED)
 $(TEST_ADVANCED): $(TEST_DIR)/test_advanced_optimizers.c $(LIB_SRCS) | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
+test-models: $(TEST_MODELS)
+	./$(TEST_MODELS)
+
+$(TEST_MODELS): $(TEST_DIR)/test_models.c $(LIB_SRCS) | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+
 # --- Example targets ---
-example: example-vector example-matrix example-analysis example-linear-regression example-xor
+example: example-vector example-matrix example-analysis example-linear-regression example-xor example-model-workflow
 
 example-vector: $(EXAMPLE_VEC)
 	./$(EXAMPLE_VEC)
@@ -176,6 +184,12 @@ example-xor: $(EXAMPLE_XOR)
 	./$(EXAMPLE_XOR)
 
 $(EXAMPLE_XOR): $(EXAMPLE_DIR)/xor_example.c $(LIB_SRCS) | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+
+example-model-workflow: $(EXAMPLE_WORKFLOW)
+	./$(EXAMPLE_WORKFLOW)
+
+$(EXAMPLE_WORKFLOW): $(EXAMPLE_DIR)/model_workflow.c $(LIB_SRCS) | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 # --- Sanitizer builds (development) ---

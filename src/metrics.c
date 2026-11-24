@@ -1,5 +1,6 @@
 #include "cml/metrics.h"
 #include "cml/classification.h"
+#include "cml/loss.h"
 #include "cml/memory.h"
 #include "internal.h"
 
@@ -138,5 +139,151 @@ CMLStatus cml_roc_curve(const CMLVector *actual, const CMLVector *scores,
   }
   cml_free(ranked);
   *out = curve;
+  return CML_SUCCESS;
+}
+
+CMLStatus cml_r_squared(const CMLVector *actual, const CMLVector *predicted,
+                        double *out) {
+  if (actual == NULL || out == NULL)
+    return CML_ERROR_INVALID_ARGUMENT;
+  if (actual->size == 0)
+    return CML_ERROR_INVALID_DIMENSION;
+  CMLStatus status = cml_vector_storage(actual, actual->size);
+  if (status == CML_SUCCESS)
+    status = cml_vector_storage(predicted, actual->size);
+  if (status != CML_SUCCESS)
+    return status;
+
+  double scale = 0.0;
+  bool constant = true, exact = true;
+  for (size_t i = 0; i < actual->size; ++i) {
+    double target = actual->data[i], prediction = predicted->data[i];
+    if (!isfinite(target) || !isfinite(prediction))
+      return CML_ERROR_NUMERICAL;
+    constant = constant && target == actual->data[0];
+    exact = exact && target == prediction;
+    scale = fmax(scale, fmax(fabs(target), fabs(prediction)));
+  }
+  if (constant || exact) {
+    *out = exact ? 1.0 : 0.0;
+    return CML_SUCCESS;
+  }
+
+  int exponent;
+  frexp(scale, &exponent);
+  double origin = scalbn(actual->data[0], -exponent), mean = 0.0;
+  for (size_t i = 0; i < actual->size; ++i)
+    mean += scalbn(actual->data[i], -exponent) - origin;
+  mean /= (double)actual->size;
+  double residual = 0.0, total = 0.0;
+  for (size_t i = 0; i < actual->size; ++i) {
+    double target = scalbn(actual->data[i], -exponent);
+    double error = scalbn(predicted->data[i], -exponent) - target;
+    double centered = (target - origin) - mean;
+    residual = fma(error, error, residual);
+    total = fma(centered, centered, total);
+  }
+  if (total == 0.0)
+    return CML_ERROR_NUMERICAL;
+  double score = 1.0 - residual / total;
+  if (!isfinite(score))
+    return CML_ERROR_NUMERICAL;
+  *out = score;
+  return CML_SUCCESS;
+}
+
+CMLStatus cml_regression_metrics(const CMLVector *actual,
+                                 const CMLVector *predicted,
+                                 CMLRegressionMetrics *out) {
+  if (out == NULL)
+    return CML_ERROR_INVALID_ARGUMENT;
+  CMLRegressionMetrics values = {0};
+  CMLStatus status = cml_loss_mae(actual, predicted, &values.mae);
+  if (status == CML_SUCCESS)
+    status = cml_loss_mse(actual, predicted, &values.mse);
+  if (status == CML_SUCCESS)
+    status = cml_loss_rmse(actual, predicted, &values.rmse);
+  if (status == CML_SUCCESS)
+    status = cml_r_squared(actual, predicted, &values.r_squared);
+  if (status == CML_SUCCESS) {
+    values.samples = actual->size;
+    *out = values;
+  }
+  return status;
+}
+
+void cml_multiclass_metrics_destroy(CMLMulticlassMetrics *report) {
+  if (report != NULL) {
+    cml_free(report->confusion);
+    cml_free(report->per_class);
+    cml_free(report);
+  }
+}
+
+static bool valid_class(double value, size_t classes) {
+  return value >= 0.0 && value < (double)classes && value == floor(value);
+}
+
+CMLStatus cml_multiclass_metrics(const CMLVector *actual,
+                                 const CMLVector *predicted, size_t classes,
+                                 CMLMulticlassMetrics **out) {
+  if (actual == NULL || out == NULL)
+    return CML_ERROR_INVALID_ARGUMENT;
+  if (actual->size == 0 || classes < 2)
+    return CML_ERROR_INVALID_DIMENSION;
+  if (classes > SIZE_MAX / sizeof(size_t) / classes ||
+      classes > SIZE_MAX / sizeof(CMLBinaryMetrics))
+    return CML_ERROR_OVERFLOW;
+  CMLStatus status = cml_vector_storage(actual, actual->size);
+  if (status == CML_SUCCESS)
+    status = cml_vector_storage(predicted, actual->size);
+  if (status != CML_SUCCESS)
+    return status;
+  for (size_t i = 0; i < actual->size; ++i) {
+    if (!isfinite(actual->data[i]) || !isfinite(predicted->data[i]))
+      return CML_ERROR_NUMERICAL;
+    if (!valid_class(actual->data[i], classes) ||
+        !valid_class(predicted->data[i], classes))
+      return CML_ERROR_INVALID_ARGUMENT;
+  }
+
+  CMLMulticlassMetrics *report = cml_calloc(1, sizeof(*report));
+  if (report == NULL)
+    return CML_ERROR_OUT_OF_MEMORY;
+  report->classes = classes;
+  report->confusion = cml_calloc(classes * classes, sizeof(*report->confusion));
+  report->per_class = cml_calloc(classes, sizeof(*report->per_class));
+  if (report->confusion == NULL || report->per_class == NULL) {
+    cml_multiclass_metrics_destroy(report);
+    return CML_ERROR_OUT_OF_MEMORY;
+  }
+  for (size_t i = 0; i < actual->size; ++i)
+    ++report->confusion[(size_t)actual->data[i] * classes +
+                        (size_t)predicted->data[i]];
+
+  size_t correct = 0;
+  for (size_t i = 0; i < classes; ++i) {
+    size_t tp = report->confusion[i * classes + i], support = 0, guessed = 0;
+    for (size_t j = 0; j < classes; ++j) {
+      support += report->confusion[i * classes + j];
+      guessed += report->confusion[j * classes + i];
+    }
+    correct += tp;
+    size_t fn = support - tp, fp = guessed - tp;
+    CMLConfusionMatrix counts = {actual->size - tp - fp - fn, fp, fn, tp};
+    CMLBinaryMetrics rates = binary_rates(counts);
+    report->per_class[i] = rates;
+    double weight = ratio(support, actual->size);
+    report->weighted.precision += rates.precision * weight;
+    report->weighted.recall += rates.recall * weight;
+    report->weighted.f1 += rates.f1 * weight;
+    report->macro.precision += rates.precision / (double)classes;
+    report->macro.recall += rates.recall / (double)classes;
+    report->macro.f1 += rates.f1 / (double)classes;
+  }
+  report->accuracy = ratio(correct, actual->size);
+  report->micro = (CMLClassificationRates){report->accuracy, report->accuracy,
+                                           report->accuracy};
+  *out = report;
   return CML_SUCCESS;
 }

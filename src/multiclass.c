@@ -1,17 +1,10 @@
-#include "cml/multiclass.h"
 #include "cml/activation.h"
 #include "cml/logistic_regression.h"
 #include "cml/memory.h"
 #include "internal.h"
+#include "multiclass_internal.h"
 
 #include <string.h>
-
-struct CMLMulticlassClassifier {
-  size_t features, classes;
-  CMLMulticlassMethod method;
-  CMLVector *parameters;
-  bool trained;
-};
 
 CMLStatus cml_classification_validate_classes(const CMLDataset *data,
                                               size_t classes) {

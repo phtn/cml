@@ -213,3 +213,25 @@ CMLStatus cml_network_predict_batch(const CMLNetwork *network,
   cml_vector_destroy(values);
   return status;
 }
+
+CMLStatus cml_network_summary(const CMLNetwork *network, FILE *stream) {
+  if (network == NULL || stream == NULL)
+    return CML_ERROR_INVALID_ARGUMENT;
+  static const char *const names[] = {"identity", "ReLU", "sigmoid", "tanh",
+                                      "softmax"};
+  if (fprintf(stream, "Dense network with %zu input features\n",
+              network->inputs) < 0)
+    return CML_ERROR_IO;
+  for (size_t i = 0; i < network->layer_count; ++i) {
+    const CMLDenseLayer *layer = &network->layers[i];
+    if (fprintf(stream, "Layer %zu  %zu -> %zu  %s  %zu parameters\n", i + 1,
+                layer->inputs, layer->config.units,
+                names[layer->config.activation],
+                (layer->inputs + 1) * layer->config.units) < 0)
+      return CML_ERROR_IO;
+  }
+  return fprintf(stream, "Total parameters %zu\n", network->parameters->size) <
+                 0
+             ? CML_ERROR_IO
+             : CML_SUCCESS;
+}

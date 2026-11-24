@@ -36,4 +36,34 @@ CMLStatus cml_roc_curve(const CMLVector *actual, const CMLVector *scores,
                         CMLRocCurve **out);
 void cml_roc_curve_destroy(CMLRocCurve *curve);
 
+typedef struct CMLRegressionMetrics {
+  double mae, mse, rmse, r_squared;
+  size_t samples;
+} CMLRegressionMetrics;
+
+/* R² for constant targets is 1 for exact predictions and 0 otherwise. */
+CMLStatus cml_r_squared(const CMLVector *actual, const CMLVector *predicted,
+                        double *out);
+CMLStatus cml_regression_metrics(const CMLVector *actual,
+                                 const CMLVector *predicted,
+                                 CMLRegressionMetrics *out);
+
+typedef struct CMLClassificationRates {
+  double precision, recall, f1;
+} CMLClassificationRates;
+
+typedef struct CMLMulticlassMetrics {
+  size_t classes;
+  size_t *confusion; /* row-major, actual rows and predicted columns */
+  CMLBinaryMetrics *per_class;
+  double accuracy;
+  CMLClassificationRates macro, weighted, micro;
+} CMLMulticlassMetrics;
+
+/* The caller owns the returned report. Missing classes have zero rates. */
+CMLStatus cml_multiclass_metrics(const CMLVector *actual,
+                                 const CMLVector *predicted, size_t classes,
+                                 CMLMulticlassMetrics **out);
+void cml_multiclass_metrics_destroy(CMLMulticlassMetrics *report);
+
 #endif

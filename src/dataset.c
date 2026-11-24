@@ -6,6 +6,7 @@
 #include "cml/dataset.h"
 #include "cml/math.h"
 #include "cml/memory.h"
+#include "internal.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -67,12 +68,13 @@ CMLDataset *cml_dataset_create(size_t num_samples, size_t num_features) {
   ds->X = cml_matrix_create(num_samples, num_features);
   ds->y = cml_vector_create(num_samples);
 
-  if ((num_samples > 0 && num_features > 0 && ds->X == NULL) ||
-      (num_samples > 0 && ds->y == NULL)) {
+  if (ds->X == NULL || ds->y == NULL) {
     cml_dataset_destroy(ds);
     return NULL;
   }
 
+  if (num_samples == 0)
+    ds->X->cols = num_features;
   return ds;
 }
 
@@ -164,40 +166,36 @@ CMLStatus cml_dataset_set_feature_names(CMLDataset *ds,
                                         const char *const *names) {
   if (ds == NULL || names == NULL)
     return CML_ERROR_INVALID_ARGUMENT;
-
-  if (ds->feature_names) {
-    for (size_t i = 0; i < ds->num_features; ++i) {
-      if (ds->feature_names[i])
-        cml_free(ds->feature_names[i]);
-    }
-    cml_free(ds->feature_names);
-    ds->feature_names = NULL;
-  }
-
-  ds->feature_names = (char **)cml_calloc(ds->num_features, sizeof(char *));
-  if (ds->feature_names == NULL)
+  if (ds->num_features == 0)
+    return CML_ERROR_INVALID_DIMENSION;
+  char **copy = cml_calloc(ds->num_features, sizeof(*copy));
+  if (copy == NULL)
     return CML_ERROR_OUT_OF_MEMORY;
-
   for (size_t i = 0; i < ds->num_features; ++i) {
-    if (names[i]) {
-      ds->feature_names[i] = cml_strdup(names[i]);
+    if (names[i] != NULL && (copy[i] = cml_strdup(names[i])) == NULL) {
+      for (size_t j = 0; j < i; ++j)
+        cml_free(copy[j]);
+      cml_free(copy);
+      return CML_ERROR_OUT_OF_MEMORY;
     }
   }
-
+  if (ds->feature_names != NULL) {
+    for (size_t i = 0; i < ds->num_features; ++i)
+      cml_free(ds->feature_names[i]);
+    cml_free(ds->feature_names);
+  }
+  ds->feature_names = copy;
   return CML_SUCCESS;
 }
 
 CMLStatus cml_dataset_set_target_name(CMLDataset *ds, const char *name) {
   if (ds == NULL)
     return CML_ERROR_INVALID_ARGUMENT;
-
-  if (ds->target_name) {
-    cml_free(ds->target_name);
-    ds->target_name = NULL;
-  }
-  if (name) {
-    ds->target_name = cml_strdup(name);
-  }
+  char *copy = name == NULL ? NULL : cml_strdup(name);
+  if (name != NULL && copy == NULL)
+    return CML_ERROR_OUT_OF_MEMORY;
+  cml_free(ds->target_name);
+  ds->target_name = copy;
   return CML_SUCCESS;
 }
 
@@ -311,120 +309,280 @@ CMLStatus cml_dataset_shuffle(CMLDataset *ds, uint64_t seed) {
  * ------------------------------------------------------------------------------
  */
 
+static CMLStatus validate_split_data(const CMLDataset *src) {
+  CMLStatus status = cml_dataset_validate(src);
+  if (status == CML_SUCCESS)
+    status = cml_matrix_storage(src->X);
+  if (status == CML_SUCCESS)
+    status = cml_vector_storage(src->y, src->num_samples);
+  return status;
+}
+
+static CMLStatus gather_rows(const CMLDataset *src, const size_t *indices,
+                             size_t count, CMLDataset **out) {
+  CMLDataset *subset = cml_dataset_create(count, src->num_features);
+  if (subset == NULL)
+    return CML_ERROR_OUT_OF_MEMORY;
+  size_t cols = src->num_features;
+  for (size_t i = 0; i < count; ++i) {
+    memcpy(subset->X->data + i * cols, src->X->data + indices[i] * cols,
+           cols * sizeof(double));
+    subset->y->data[i] = src->y->data[indices[i]];
+  }
+  CMLStatus status = CML_SUCCESS;
+  if (src->feature_names != NULL)
+    status = cml_dataset_set_feature_names(
+        subset, (const char *const *)src->feature_names);
+  if (status == CML_SUCCESS && src->target_name != NULL)
+    status = cml_dataset_set_target_name(subset, src->target_name);
+  if (status == CML_SUCCESS)
+    *out = subset;
+  else
+    cml_dataset_destroy(subset);
+  return status;
+}
+
+static size_t *split_indices(size_t count, bool shuffle, uint64_t seed) {
+  size_t *indices = cml_calloc(count, sizeof(*indices));
+  if (indices != NULL) {
+    for (size_t i = 0; i < count; ++i)
+      indices[i] = i;
+    if (shuffle)
+      cml_shuffle_indices(indices, count, &seed);
+  }
+  return indices;
+}
+
+static CMLStatus split_contiguous(const CMLDataset *src, const size_t *indices,
+                                  size_t n_train, size_t n_validation,
+                                  CMLDataset **out_train, CMLDataset **out_test,
+                                  CMLDataset **out_validation) {
+  CMLDataset *train = NULL, *test = NULL, *validation = NULL;
+  CMLStatus status = gather_rows(src, indices, n_train, &train);
+  if (status == CML_SUCCESS && n_validation > 0 && out_validation != NULL)
+    status = gather_rows(src, indices + n_train, n_validation, &validation);
+  if (status == CML_SUCCESS)
+    status = gather_rows(src, indices + n_train + n_validation,
+                         src->num_samples - n_train - n_validation, &test);
+  if (status == CML_SUCCESS) {
+    *out_train = train;
+    *out_test = test;
+    if (out_validation != NULL)
+      *out_validation = validation;
+  } else {
+    cml_dataset_destroy(train);
+    cml_dataset_destroy(test);
+    cml_dataset_destroy(validation);
+  }
+  return status;
+}
+
 CMLStatus cml_dataset_split(const CMLDataset *src, double train_ratio,
                             double test_ratio, double val_ratio, bool shuffle,
                             uint64_t seed, CMLDataset **out_train,
                             CMLDataset **out_test, CMLDataset **out_val) {
-  if (src == NULL || out_train == NULL || out_test == NULL) {
+  if (out_train == NULL || out_test == NULL || out_train == out_test ||
+      out_train == out_val || out_test == out_val || !isfinite(train_ratio) ||
+      !isfinite(test_ratio) || !isfinite(val_ratio) || train_ratio < 0.0 ||
+      test_ratio < 0.0 || val_ratio < 0.0 ||
+      !cml_is_close(train_ratio + test_ratio + val_ratio, 1.0, 1e-5))
     return CML_ERROR_INVALID_ARGUMENT;
-  }
-  if (train_ratio < 0.0 || test_ratio < 0.0 || val_ratio < 0.0) {
-    return CML_ERROR_INVALID_ARGUMENT;
-  }
-
-  double sum_ratios = train_ratio + test_ratio + val_ratio;
-  if (!cml_is_close(sum_ratios, 1.0, 1e-5)) {
-    return CML_ERROR_INVALID_ARGUMENT;
-  }
-
+  CMLStatus status = validate_split_data(src);
+  if (status != CML_SUCCESS)
+    return status;
   size_t n = src->num_samples;
-  size_t n_train = (size_t)round((double)n * train_ratio);
-  size_t n_val = (val_ratio > 0.0) ? (size_t)round((double)n * val_ratio) : 0;
-  if (n_train + n_val > n) {
+  size_t n_train = (size_t)round((double)n * fmin(train_ratio, 1.0));
+  size_t n_val = (size_t)round((double)n * fmin(val_ratio, 1.0));
+  if (n_train > n - n_val)
     n_train = n - n_val;
-  }
-  size_t n_test = n - n_train - n_val;
-
-  /* Permutation array */
-  size_t *indices = (size_t *)cml_malloc(n * sizeof(size_t));
+  size_t *indices = split_indices(n, shuffle, seed);
   if (indices == NULL)
     return CML_ERROR_OUT_OF_MEMORY;
-  for (size_t i = 0; i < n; ++i)
-    indices[i] = i;
-
-  if (shuffle) {
-    CMLRng rng;
-    cml_rng_init(&rng, seed);
-    for (size_t i = n - 1; i > 0; --i) {
-      size_t j = cml_rng_uniform(&rng, i + 1);
-      if (i != j) {
-        size_t tmp = indices[i];
-        indices[i] = indices[j];
-        indices[j] = tmp;
-      }
-    }
-  }
-
-  CMLDataset *d_train = cml_dataset_create(n_train, src->num_features);
-  CMLDataset *d_test = cml_dataset_create(n_test, src->num_features);
-  CMLDataset *d_val = (n_val > 0 && out_val)
-                          ? cml_dataset_create(n_val, src->num_features)
-                          : NULL;
-
-  /* Populate train */
-  for (size_t i = 0; i < n_train; ++i) {
-    size_t idx = indices[i];
-    cml_mem_copy(&d_train->X->data[i * src->num_features],
-                 &src->X->data[idx * src->num_features],
-                 src->num_features * sizeof(double));
-    d_train->y->data[i] = src->y->data[idx];
-  }
-  if (src->feature_names)
-    cml_dataset_set_feature_names(d_train,
-                                  (const char *const *)src->feature_names);
-  if (src->target_name)
-    cml_dataset_set_target_name(d_train, src->target_name);
-
-  /* Populate val */
-  if (d_val) {
-    for (size_t i = 0; i < n_val; ++i) {
-      size_t idx = indices[n_train + i];
-      cml_mem_copy(&d_val->X->data[i * src->num_features],
-                   &src->X->data[idx * src->num_features],
-                   src->num_features * sizeof(double));
-      d_val->y->data[i] = src->y->data[idx];
-    }
-    if (src->feature_names)
-      cml_dataset_set_feature_names(d_val,
-                                    (const char *const *)src->feature_names);
-    if (src->target_name)
-      cml_dataset_set_target_name(d_val, src->target_name);
-  }
-
-  /* Populate test */
-  for (size_t i = 0; i < n_test; ++i) {
-    size_t idx = indices[n_train + n_val + i];
-    cml_mem_copy(&d_test->X->data[i * src->num_features],
-                 &src->X->data[idx * src->num_features],
-                 src->num_features * sizeof(double));
-    d_test->y->data[i] = src->y->data[idx];
-  }
-  if (src->feature_names)
-    cml_dataset_set_feature_names(d_test,
-                                  (const char *const *)src->feature_names);
-  if (src->target_name)
-    cml_dataset_set_target_name(d_test, src->target_name);
-
+  status = split_contiguous(src, indices, n_train, n_val, out_train, out_test,
+                            out_val);
   cml_free(indices);
-  *out_train = d_train;
-  *out_test = d_test;
-  if (out_val)
-    *out_val = d_val;
+  return status;
+}
 
-  return CML_SUCCESS;
+typedef struct {
+  size_t index;
+  double label;
+} LabeledIndex;
+
+static int compare_labels(const void *first, const void *second) {
+  const LabeledIndex *a = first, *b = second;
+  if (a->label != b->label)
+    return (a->label > b->label) - (a->label < b->label);
+  return (a->index > b->index) - (a->index < b->index);
+}
+
+typedef struct {
+  size_t start, count, train;
+  double remainder;
+} ClassGroup;
+
+static int compare_remainder(const void *first, const void *second) {
+  const ClassGroup *a = first, *b = second;
+  if (a->remainder != b->remainder)
+    return (a->remainder < b->remainder) - (a->remainder > b->remainder);
+  return (a->start > b->start) - (a->start < b->start);
 }
 
 CMLStatus cml_dataset_split_stratified(const CMLDataset *src,
                                        double train_ratio, double test_ratio,
                                        uint64_t seed, CMLDataset **out_train,
                                        CMLDataset **out_test) {
-  if (src == NULL || out_train == NULL || out_test == NULL)
+  if (out_train == NULL || out_test == NULL || out_train == out_test ||
+      !isfinite(train_ratio) || !isfinite(test_ratio) || train_ratio <= 0.0 ||
+      test_ratio <= 0.0 || !cml_is_close(train_ratio + test_ratio, 1.0, 1e-5))
     return CML_ERROR_INVALID_ARGUMENT;
-  if (train_ratio <= 0.0 || test_ratio <= 0.0)
-    return CML_ERROR_INVALID_ARGUMENT;
+  CMLStatus status = validate_split_data(src);
+  if (status != CML_SUCCESS)
+    return status;
+  size_t n = src->num_samples;
+  if (!cml_values_finite(src->y->data, n))
+    return CML_ERROR_NUMERICAL;
+  if (n > SIZE_MAX / sizeof(ClassGroup) || n > SIZE_MAX / sizeof(LabeledIndex))
+    return CML_ERROR_OVERFLOW;
+  size_t *indices = cml_calloc(n, sizeof(*indices));
+  LabeledIndex *ranked = cml_calloc(n, sizeof(*ranked));
+  ClassGroup *groups = cml_calloc(n, sizeof(*groups));
+  if (indices == NULL || ranked == NULL || groups == NULL) {
+    status = CML_ERROR_OUT_OF_MEMORY;
+    goto done;
+  }
+  for (size_t i = 0; i < n; ++i)
+    ranked[i] = (LabeledIndex){i, src->y->data[i]};
+  qsort(ranked, n, sizeof(*ranked), compare_labels);
+  double fraction = train_ratio / (train_ratio + test_ratio);
+  size_t group_count = 0, allocated = 0;
+  for (size_t start = 0; start < n;) {
+    size_t end = start + 1;
+    while (end < n && ranked[end].label == ranked[start].label)
+      ++end;
+    double quota = (double)(end - start) * fraction;
+    size_t train = (size_t)floor(quota);
+    groups[group_count++] =
+        (ClassGroup){start, end - start, train, quota - (double)train};
+    allocated += train;
+    start = end;
+  }
+  size_t target = (size_t)round((double)n * fraction);
+  if (allocated > target || target - allocated > group_count) {
+    status = CML_ERROR_NUMERICAL;
+    goto done;
+  }
+  qsort(groups, group_count, sizeof(*groups), compare_remainder);
+  for (size_t i = 0; i < target - allocated; ++i)
+    ++groups[i].train;
+  size_t train_at = 0, test_at = target;
+  for (size_t i = 0; i < group_count; ++i) {
+    ClassGroup group = groups[i];
+    for (size_t j = group.count; j > 1; --j) {
+      size_t from = group.start + j - 1;
+      size_t to = group.start + cml_random_index(&seed, j);
+      LabeledIndex saved = ranked[from];
+      ranked[from] = ranked[to];
+      ranked[to] = saved;
+    }
+    for (size_t j = 0; j < group.count; ++j)
+      indices[j < group.train ? train_at++ : test_at++] =
+          ranked[group.start + j].index;
+  }
+  cml_shuffle_indices(indices, target, &seed);
+  cml_shuffle_indices(indices + target, n - target, &seed);
+  status = split_contiguous(src, indices, target, 0, out_train, out_test, NULL);
+done:
+  cml_free(groups);
+  cml_free(ranked);
+  cml_free(indices);
+  return status;
+}
 
-  return cml_dataset_split(src, train_ratio, test_ratio, 0.0, true, seed,
-                           out_train, out_test, NULL);
+CMLStatus cml_dataset_kfold_split(const CMLDataset *src, size_t folds,
+                                  size_t fold, bool shuffle, uint64_t seed,
+                                  CMLDataset **out_train,
+                                  CMLDataset **out_test) {
+  if (out_train == NULL || out_test == NULL || out_train == out_test)
+    return CML_ERROR_INVALID_ARGUMENT;
+  CMLStatus status = validate_split_data(src);
+  if (status != CML_SUCCESS)
+    return status;
+  size_t n = src->num_samples;
+  if (folds < 2 || folds > n || fold >= folds)
+    return CML_ERROR_INVALID_DIMENSION;
+  size_t base = n / folds, extra = n % folds;
+  size_t count = base + (size_t)(fold < extra);
+  size_t start = fold * base + (fold < extra ? fold : extra);
+  size_t *indices = split_indices(n, shuffle, seed);
+  if (indices == NULL)
+    return CML_ERROR_OUT_OF_MEMORY;
+  CMLDataset *train = NULL, *test = NULL;
+  status = gather_rows(src, indices + start, count, &test);
+  if (status == CML_SUCCESS) {
+    memmove(indices + start, indices + start + count,
+            (n - start - count) * sizeof(*indices));
+    status = gather_rows(src, indices, n - count, &train);
+  }
+  if (status == CML_SUCCESS) {
+    *out_train = train;
+    *out_test = test;
+  } else {
+    cml_dataset_destroy(test);
+  }
+  cml_free(indices);
+  return status;
+}
+
+struct CMLBatchIterator {
+  size_t *indices;
+  size_t samples, batch_size, offset;
+};
+
+CMLBatchIterator *cml_batch_iterator_create(size_t samples, size_t batch_size,
+                                            bool shuffle, uint64_t seed) {
+  if (samples == 0 || batch_size == 0)
+    return NULL;
+  CMLBatchIterator *iterator = cml_malloc(sizeof(*iterator));
+  if (iterator != NULL) {
+    *iterator = (CMLBatchIterator){split_indices(samples, shuffle, seed),
+                                   samples, batch_size, 0};
+    if (iterator->indices == NULL) {
+      cml_free(iterator);
+      return NULL;
+    }
+  }
+  return iterator;
+}
+
+void cml_batch_iterator_destroy(CMLBatchIterator *iterator) {
+  if (iterator != NULL) {
+    cml_free(iterator->indices);
+    cml_free(iterator);
+  }
+}
+
+CMLStatus cml_batch_iterator_reset(CMLBatchIterator *iterator, bool shuffle,
+                                   uint64_t seed) {
+  if (iterator == NULL)
+    return CML_ERROR_INVALID_ARGUMENT;
+  for (size_t i = 0; i < iterator->samples; ++i)
+    iterator->indices[i] = i;
+  if (shuffle)
+    cml_shuffle_indices(iterator->indices, iterator->samples, &seed);
+  iterator->offset = 0;
+  return CML_SUCCESS;
+}
+
+CMLStatus cml_batch_iterator_next(CMLBatchIterator *iterator,
+                                  const size_t **indices, size_t *count) {
+  if (iterator == NULL || indices == NULL || count == NULL)
+    return CML_ERROR_INVALID_ARGUMENT;
+  size_t remaining = iterator->samples - iterator->offset;
+  *count = remaining < iterator->batch_size ? remaining : iterator->batch_size;
+  *indices = *count == 0 ? NULL : iterator->indices + iterator->offset;
+  iterator->offset += *count;
+  return CML_SUCCESS;
 }
 
 /* ==============================================================================

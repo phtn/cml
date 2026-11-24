@@ -44,6 +44,7 @@ make test-optimizer
 make test-classification
 make test-activation
 make test-logistic
+make test-network
 
 # Run example programs
 make example
@@ -55,6 +56,14 @@ make example-linear-regression
 # Run with AddressSanitizer & UndefinedBehaviorSanitizer
 make sanitize
 ```
+
+---
+
+## Phase 8 · Dense Networks
+
+Compose dense layers with identity, ReLU, sigmoid, tanh, or softmax. Network
+weights are initialized from a seed. Single-sample and batch predictions use
+the same forward pass. [Phase 8 guide](docs/PHASE_8.md)
 
 ---
 

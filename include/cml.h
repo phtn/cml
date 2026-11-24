@@ -18,5 +18,6 @@
 #include "cml/logistic_regression.h"
 #include "cml/metrics.h"
 #include "cml/multiclass.h"
+#include "cml/network.h"
 
 #endif /* CML_H */

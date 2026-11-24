@@ -2,6 +2,7 @@
 #define CML_H
 
 /* Public API for C Machine Learning Library (cml) */
+// IWYU pragma: begin_exports
 #include "cml/memory.h"
 #include "cml/error.h"
 #include "cml/math.h"
@@ -21,5 +22,6 @@
 #include "cml/network.h"
 #include "cml/serialization.h"
 #include "cml/neighbors.h"
+// IWYU pragma: end_exports
 
 #endif /* CML_H */

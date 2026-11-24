@@ -1,0 +1,46 @@
+#ifndef CML_LINEAR_REGRESSION_H
+#define CML_LINEAR_REGRESSION_H
+
+#include "cml/matrix.h"
+
+typedef struct CMLLinearRegression CMLLinearRegression;
+
+/* Create an untrained model that owns its coefficients. Only one feature is
+ * supported. Returns NULL for an unsupported feature count or failed
+ * allocation.
+ */
+CMLLinearRegression *cml_linear_regression_create(size_t num_features);
+
+/* Destroy the model and its coefficients. NULL is safe. */
+void cml_linear_regression_destroy(CMLLinearRegression *model);
+
+/* Return whether a fit has succeeded. Returns false for NULL. */
+bool cml_linear_regression_is_trained(const CMLLinearRegression *model);
+
+/* Fit by ordinary least squares with an intercept. Each row of features is a
+ * sample, and targets must contain one value per row. At least one sample is
+ * required. Constant features yield a zero weight and the target mean.
+ * The model borrows the training inputs for this call. A failed fit preserves
+ * the previous model state. Non-finite data or coefficients that cannot be
+ * represented return CML_ERROR_NUMERICAL.
+ */
+CMLStatus cml_linear_regression_fit(CMLLinearRegression *model,
+                                    const CMLMatrix *features,
+                                    const CMLVector *targets);
+
+/* Predict a single sample into out. An untrained model returns
+ * CML_ERROR_INVALID_ARGUMENT. Non-finite data or predictions return
+ * CML_ERROR_NUMERICAL. On error, out is unchanged.
+ */
+CMLStatus cml_linear_regression_predict(const CMLLinearRegression *model,
+                                        const CMLVector *features, double *out);
+
+/* Copy fitted coefficients into a caller-owned vector of the model's feature
+ * count, and copy the intercept into a separate output. An untrained model
+ * returns CML_ERROR_INVALID_ARGUMENT. On error, both outputs are unchanged.
+ */
+CMLStatus cml_linear_regression_get_parameters(const CMLLinearRegression *model,
+                                               CMLVector *weights,
+                                               double *intercept);
+
+#endif /* CML_LINEAR_REGRESSION_H */

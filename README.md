@@ -12,6 +12,7 @@ CML
 ├── Statistics    → descriptive & inferential statistics (Phase 4)
 ├── Preprocessing → scaling, imputation, outlier detection (Phase 4)
 ├── Dataset       → datasets, shuffling, train/test splitting (Phase 4)
+├── Regression    → closed-form simple linear regression (Phase 5)
 └── ...
 ```
 
@@ -23,7 +24,7 @@ CML
 # Build default target
 make
 
-# Run all test suites (memory, error, vector, matrix, statistics, preprocessing, dataset)
+# Run all test suites
 make test
 
 # Run specific test suites
@@ -34,16 +35,32 @@ make test-matrix
 make test-statistics
 make test-preprocessing
 make test-dataset
+make test-linear-regression
 
 # Run example programs
 make example
 make example-vector
 make example-matrix
 make example-analysis
+make example-linear-regression
 
 # Run with AddressSanitizer & UndefinedBehaviorSanitizer
 make sanitize
 ```
+
+---
+
+## Phase 5 · Simple Linear Regression
+
+Fit a one-feature model with `cml_linear_regression_fit` using an `N × 1`
+feature matrix and a target vector of length `N`. The model owns its
+coefficients and borrows the training data for the duration of the fit.
+Use `cml_linear_regression_predict` with a one-element feature vector after a
+successful fit. A constant feature yields a zero slope and the target mean.
+A failed refit preserves the previous coefficients.
+
+`make example-linear-regression` fits `y = 2x + 1` and predicts `21` for the
+unseen input `10`. [Public API](include/cml/linear_regression.h)
 
 ---
 

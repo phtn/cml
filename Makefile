@@ -20,12 +20,14 @@ TEST_MATRIX        = $(BUILD_DIR)/test_matrix
 TEST_STATISTICS    = $(BUILD_DIR)/test_statistics
 TEST_PREPROCESSING = $(BUILD_DIR)/test_preprocessing
 TEST_DATASET       = $(BUILD_DIR)/test_dataset
+TEST_REGRESSION    = $(BUILD_DIR)/test_linear_regression
 
 EXAMPLE_VEC = $(BUILD_DIR)/vector_example
 EXAMPLE_MAT = $(BUILD_DIR)/matrix_example
 EXAMPLE_DAT = $(BUILD_DIR)/data_analysis_example
+EXAMPLE_REG = $(BUILD_DIR)/linear_regression_example
 
-.PHONY: all clean test test-memory test-error test-vector test-matrix test-statistics test-preprocessing test-dataset example example-vector example-matrix example-analysis sanitize
+.PHONY: all clean test test-memory test-error test-vector test-matrix test-statistics test-preprocessing test-dataset test-linear-regression example example-vector example-matrix example-analysis example-linear-regression sanitize
 
 all: $(TARGET)
 
@@ -36,7 +38,7 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 # --- Test targets ---
-test: test-memory test-error test-vector test-matrix test-statistics test-preprocessing test-dataset
+test: test-memory test-error test-vector test-matrix test-statistics test-preprocessing test-dataset test-linear-regression
 
 test-memory: $(TEST_MEMORY)
 	./$(TEST_MEMORY)
@@ -59,6 +61,9 @@ test-preprocessing: $(TEST_PREPROCESSING)
 test-dataset: $(TEST_DATASET)
 	./$(TEST_DATASET)
 
+test-linear-regression: $(TEST_REGRESSION)
+	./$(TEST_REGRESSION)
+
 $(TEST_MEMORY): $(TEST_DIR)/test_memory.c $(LIB_SRCS) | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
@@ -80,8 +85,11 @@ $(TEST_PREPROCESSING): $(TEST_DIR)/test_preprocessing.c $(LIB_SRCS) | $(BUILD_DI
 $(TEST_DATASET): $(TEST_DIR)/test_dataset.c $(LIB_SRCS) | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
+$(TEST_REGRESSION): $(TEST_DIR)/test_linear_regression.c $(LIB_SRCS) | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+
 # --- Example targets ---
-example: example-vector example-matrix example-analysis
+example: example-vector example-matrix example-analysis example-linear-regression
 
 example-vector: $(EXAMPLE_VEC)
 	./$(EXAMPLE_VEC)
@@ -92,6 +100,9 @@ example-matrix: $(EXAMPLE_MAT)
 example-analysis: $(EXAMPLE_DAT)
 	./$(EXAMPLE_DAT)
 
+example-linear-regression: $(EXAMPLE_REG)
+	./$(EXAMPLE_REG)
+
 $(EXAMPLE_VEC): $(EXAMPLE_DIR)/vector_example.c $(LIB_SRCS) | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
@@ -99,6 +110,9 @@ $(EXAMPLE_MAT): $(EXAMPLE_DIR)/matrix_example.c $(LIB_SRCS) | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 $(EXAMPLE_DAT): $(EXAMPLE_DIR)/data_analysis_example.c $(LIB_SRCS) | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+
+$(EXAMPLE_REG): $(EXAMPLE_DIR)/linear_regression_example.c $(LIB_SRCS) | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 # --- Sanitizer builds (development) ---

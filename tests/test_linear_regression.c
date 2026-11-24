@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <float.h>
 #include <math.h>
+#include <stdint.h>
 #include <stdio.h>
 
 static void assert_parameters(const CMLLinearRegression *model,
@@ -182,11 +183,109 @@ static void test_numerical_scale(void) {
   cml_linear_regression_destroy(model);
 }
 
+static void test_simple_gradient(void) {
+  double x[] = {1.0, 2.0, 3.0};
+  double y[] = {3.0, 5.0, 7.0};
+  double theta[] = {0.0, 0.0};
+  double gradient[2];
+  CMLMatrix features = {x, 3, 1, 3};
+  CMLVector targets = {y, 3, 3};
+  CMLVector parameters = {theta, 2, 2};
+  CMLVector out = {gradient, 2, 2};
+
+  assert(cml_linear_regression_mse_gradient(&features, &targets, &parameters,
+                                            &out) == CML_SUCCESS);
+  assert(fabs(gradient[0] - (-68.0 / 3.0)) < 1e-12);
+  assert(fabs(gradient[1] - (-10.0)) < 1e-12);
+  assert(theta[0] == 0.0 && theta[1] == 0.0);
+
+  double norm;
+  assert(cml_vector_norm_l2(&out, &norm) == CML_SUCCESS);
+  assert(fabs(norm - hypot(68.0 / 3.0, 10.0)) < 1e-12);
+
+  theta[0] = 2.0;
+  theta[1] = 1.0;
+  assert(cml_linear_regression_mse_gradient(&features, &targets, &parameters,
+                                            &out) == CML_SUCCESS);
+  assert(gradient[0] == 0.0 && gradient[1] == 0.0);
+  assert(cml_vector_norm_l2(&out, &norm) == CML_SUCCESS && norm == 0.0);
+
+  const double scales[] = {0x1p-600, 0x1p600};
+  for (size_t i = 0; i < sizeof(scales) / sizeof(scales[0]); ++i) {
+    gradient[0] = 3.0 * scales[i];
+    gradient[1] = 4.0 * scales[i];
+    assert(cml_vector_norm_l2(&out, &norm) == CML_SUCCESS);
+    assert(fabs(norm / scales[i] - 5.0) < 1e-12);
+  }
+}
+
+static void test_multiple_feature_gradient(void) {
+  double x[] = {1.0, 2.0, -1.0, -1.0, 0.0, 2.0, 2.0, -1.0, 1.0};
+  double y[] = {0.0, 10.0, 9.0};
+  double theta[] = {2.0, -1.0, 3.0, 4.0};
+  double gradient[4];
+  CMLMatrix features = {x, 3, 3, 9};
+  CMLVector targets = {y, 3, 3};
+  CMLVector parameters = {theta, 4, 4};
+  CMLVector out = {gradient, 4, 4};
+
+  assert(cml_linear_regression_mse_gradient(&features, &targets, &parameters,
+                                            &out) == CML_SUCCESS);
+  const double expected[] = {6.0, -2.0 / 3.0, -4.0 / 3.0, 4.0 / 3.0};
+  for (size_t i = 0; i < out.size; ++i) {
+    assert(fabs(gradient[i] - expected[i]) < 1e-12);
+  }
+}
+
+static void test_gradient_errors(void) {
+  double x[] = {1.0, 2.0};
+  double y[] = {3.0, 5.0};
+  double theta[] = {0.0, 0.0};
+  double gradient[] = {42.0, 17.0};
+  CMLMatrix features = {x, 2, 1, 2};
+  CMLVector targets = {y, 2, 2};
+  CMLVector parameters = {theta, 2, 2};
+  CMLVector out = {gradient, 2, 2};
+
+  assert(cml_linear_regression_mse_gradient(
+             &features, NULL, &parameters, &out) == CML_ERROR_INVALID_ARGUMENT);
+  features.rows = 0;
+  assert(cml_linear_regression_mse_gradient(&features, &targets, &parameters,
+                                            &out) ==
+         CML_ERROR_INVALID_DIMENSION);
+  features.rows = 2;
+  features.cols = SIZE_MAX;
+  assert(cml_linear_regression_mse_gradient(&features, &targets, &parameters,
+                                            &out) == CML_ERROR_OVERFLOW);
+  features.cols = 1;
+  out.size = 1;
+  assert(cml_linear_regression_mse_gradient(&features, &targets, &parameters,
+                                            &out) ==
+         CML_ERROR_INVALID_DIMENSION);
+  out.size = 2;
+
+  y[1] = NAN;
+  assert(cml_linear_regression_mse_gradient(&features, &targets, &parameters,
+                                            &out) == CML_ERROR_NUMERICAL);
+  y[1] = 5.0;
+  theta[0] = INFINITY;
+  assert(cml_linear_regression_mse_gradient(&features, &targets, &parameters,
+                                            &out) == CML_ERROR_NUMERICAL);
+  theta[0] = 0.0;
+  x[1] = DBL_MAX;
+  assert(cml_linear_regression_mse_gradient(&features, &targets, &parameters,
+                                            &out) == CML_ERROR_NUMERICAL);
+  assert(gradient[0] == 42.0 && gradient[1] == 17.0);
+}
+
 int main(void) {
   test_fit_and_refit();
   test_constant_data();
   test_errors();
   test_numerical_scale();
+  test_simple_gradient();
+  test_multiple_feature_gradient();
+  test_gradient_errors();
   puts("Linear regression tests passed.");
   return 0;
 }

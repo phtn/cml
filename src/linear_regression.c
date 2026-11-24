@@ -2,6 +2,7 @@
 #include "cml/memory.h"
 
 #include <math.h>
+#include <stdint.h>
 
 struct CMLLinearRegression {
   CMLVector *weights;
@@ -172,4 +173,79 @@ CMLStatus cml_linear_regression_get_parameters(const CMLLinearRegression *model,
   weights->data[0] = model->weights->data[0];
   *intercept = model->intercept;
   return CML_SUCCESS;
+}
+
+CMLStatus cml_linear_regression_mse_gradient(const CMLMatrix *features,
+                                             const CMLVector *targets,
+                                             const CMLVector *parameters,
+                                             CMLVector *out) {
+  if (features == NULL || targets == NULL || parameters == NULL ||
+      out == NULL) {
+    return CML_ERROR_INVALID_ARGUMENT;
+  }
+  size_t rows = features->rows;
+  size_t cols = features->cols;
+  if (rows == 0 || cols == 0 || targets->size != rows) {
+    return CML_ERROR_INVALID_DIMENSION;
+  }
+  if (cols >= SIZE_MAX / sizeof(double) ||
+      rows > SIZE_MAX / sizeof(double) / cols) {
+    return CML_ERROR_OVERFLOW;
+  }
+  size_t parameter_count = cols + 1;
+  if (parameters->size != parameter_count || out->size != parameter_count ||
+      features->capacity < rows * cols || targets->capacity < rows ||
+      parameters->capacity < parameter_count ||
+      out->capacity < parameter_count) {
+    return CML_ERROR_INVALID_DIMENSION;
+  }
+  if (features->data == NULL || targets->data == NULL ||
+      parameters->data == NULL || out->data == NULL) {
+    return CML_ERROR_INVALID_ARGUMENT;
+  }
+
+  double *gradient = cml_calloc(parameter_count, sizeof(*gradient));
+  if (gradient == NULL) {
+    return CML_ERROR_OUT_OF_MEMORY;
+  }
+
+  const double *weights = parameters->data;
+  double intercept = weights[cols];
+  double factor = 2.0 / (double)rows;
+  CMLStatus status = CML_SUCCESS;
+  for (size_t i = 0; i < rows; ++i) {
+    const double *row = features->data + i * cols;
+    double prediction = intercept;
+    for (size_t j = 0; j < cols; ++j) {
+      prediction = fma(row[j], weights[j], prediction);
+    }
+    double target = targets->data[i];
+    if (!isfinite(prediction) || !isfinite(target)) {
+      status = CML_ERROR_NUMERICAL;
+      break;
+    }
+    double residual = prediction - target;
+    /* Average before accumulating the products. Scale the terms separately
+     * when the subtraction overflows but the averaged difference may fit.
+     */
+    double change = isfinite(residual) ? factor * residual
+                                       : factor * prediction - factor * target;
+    for (size_t j = 0; j < cols; ++j) {
+      gradient[j] = fma(row[j], change, gradient[j]);
+    }
+    gradient[cols] += change;
+  }
+  if (status == CML_SUCCESS) {
+    for (size_t j = 0; j < parameter_count; ++j) {
+      if (!isfinite(gradient[j])) {
+        status = CML_ERROR_NUMERICAL;
+        break;
+      }
+    }
+  }
+  if (status == CML_SUCCESS) {
+    cml_mem_copy(out->data, gradient, parameter_count * sizeof(*gradient));
+  }
+  cml_free(gradient);
+  return status;
 }

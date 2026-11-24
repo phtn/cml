@@ -21,13 +21,14 @@ TEST_STATISTICS    = $(BUILD_DIR)/test_statistics
 TEST_PREPROCESSING = $(BUILD_DIR)/test_preprocessing
 TEST_DATASET       = $(BUILD_DIR)/test_dataset
 TEST_REGRESSION    = $(BUILD_DIR)/test_linear_regression
+TEST_LOSS          = $(BUILD_DIR)/test_loss
 
 EXAMPLE_VEC = $(BUILD_DIR)/vector_example
 EXAMPLE_MAT = $(BUILD_DIR)/matrix_example
 EXAMPLE_DAT = $(BUILD_DIR)/data_analysis_example
 EXAMPLE_REG = $(BUILD_DIR)/linear_regression_example
 
-.PHONY: all clean test test-memory test-error test-vector test-matrix test-statistics test-preprocessing test-dataset test-linear-regression example example-vector example-matrix example-analysis example-linear-regression sanitize
+.PHONY: all clean test test-memory test-error test-vector test-matrix test-statistics test-preprocessing test-dataset test-linear-regression test-loss example example-vector example-matrix example-analysis example-linear-regression sanitize
 
 all: $(TARGET)
 
@@ -38,7 +39,7 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 # --- Test targets ---
-test: test-memory test-error test-vector test-matrix test-statistics test-preprocessing test-dataset test-linear-regression
+test: test-memory test-error test-vector test-matrix test-statistics test-preprocessing test-dataset test-linear-regression test-loss
 
 test-memory: $(TEST_MEMORY)
 	./$(TEST_MEMORY)
@@ -64,6 +65,9 @@ test-dataset: $(TEST_DATASET)
 test-linear-regression: $(TEST_REGRESSION)
 	./$(TEST_REGRESSION)
 
+test-loss: $(TEST_LOSS)
+	./$(TEST_LOSS)
+
 $(TEST_MEMORY): $(TEST_DIR)/test_memory.c $(LIB_SRCS) | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
@@ -86,6 +90,9 @@ $(TEST_DATASET): $(TEST_DIR)/test_dataset.c $(LIB_SRCS) | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 $(TEST_REGRESSION): $(TEST_DIR)/test_linear_regression.c $(LIB_SRCS) | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+
+$(TEST_LOSS): $(TEST_DIR)/test_loss.c $(LIB_SRCS) | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 # --- Example targets ---

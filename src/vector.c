@@ -504,11 +504,25 @@ CMLStatus cml_vector_norm_l2(const CMLVector *vec, double *out) {
     return CML_SUCCESS;
   }
 
+  double scale = 0.0;
+  for (size_t i = 0; i < vec->size; ++i) {
+    double magnitude = fabs(vec->data[i]);
+    if (magnitude > scale || isnan(magnitude)) {
+      scale = magnitude;
+    }
+  }
+  if (scale == 0.0 || !isfinite(scale)) {
+    *out = scale;
+    return isfinite(scale) ? CML_SUCCESS : CML_ERROR_NUMERICAL;
+  }
+
+  /* Normalize the inputs before squaring to preserve the range of the norm. */
   double sum_sq = 0.0;
   for (size_t i = 0; i < vec->size; ++i) {
-    sum_sq += vec->data[i] * vec->data[i];
+    double scaled = vec->data[i] / scale;
+    sum_sq += scaled * scaled;
   }
-  double res = sqrt(sum_sq);
+  double res = scale * sqrt(sum_sq);
   *out = res;
   if (isnan(res) || isinf(res)) {
     return CML_ERROR_NUMERICAL;

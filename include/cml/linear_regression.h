@@ -43,4 +43,16 @@ CMLStatus cml_linear_regression_get_parameters(const CMLLinearRegression *model,
                                                CMLVector *weights,
                                                double *intercept);
 
+/* Compute the analytical MSE gradient at the supplied parameters. For a
+ * matrix with d feature columns, parameters and out each contain d weights
+ * followed by the intercept component. Each feature row has one target.
+ * This operation accepts one or more rows and feature columns and requires
+ * no fitted model. On error, out is unchanged. Non-finite data or arithmetic
+ * return CML_ERROR_NUMERICAL.
+ */
+CMLStatus cml_linear_regression_mse_gradient(const CMLMatrix *features,
+                                             const CMLVector *targets,
+                                             const CMLVector *parameters,
+                                             CMLVector *out);
+
 #endif /* CML_LINEAR_REGRESSION_H */

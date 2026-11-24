@@ -13,6 +13,7 @@ CML
 ├── Preprocessing → scaling, imputation, outlier detection (Phase 4)
 ├── Dataset       → datasets, shuffling, train/test splitting (Phase 4)
 ├── Regression    → closed-form simple linear regression (Phase 5)
+├── Loss          → regression cost functions (Phase 6)
 └── ...
 ```
 
@@ -36,6 +37,7 @@ make test-statistics
 make test-preprocessing
 make test-dataset
 make test-linear-regression
+make test-loss
 
 # Run example programs
 make example
@@ -47,6 +49,35 @@ make example-linear-regression
 # Run with AddressSanitizer & UndefinedBehaviorSanitizer
 make sanitize
 ```
+
+---
+
+## Phase 6 · Loss Functions and Gradients
+
+For $m$ samples, define the residual $r_i = x_i^T w + b - y_i$.
+The mean squared error is $J = \frac{1}{m}\sum_i r_i^2$.
+Its weight and intercept derivatives are
+$\nabla_w J = \frac{2}{m}X^T r$ and
+$\frac{\partial J}{\partial b} = \frac{2}{m}\sum_i r_i$.
+
+`cml_linear_regression_mse_gradient` takes a parameter vector ordered as
+weights followed by intercept and writes the gradient in the same order. It
+accepts any positive number of feature columns. Use `cml_vector_norm_l2` to
+measure the gradient magnitude. The loss API provides SSE, MSE, RMSE, and MAE
+for paired vectors. [Loss API](include/cml/loss.h)
+
+Loss and gradient calls preserve their outputs on failure. They return
+`CML_ERROR_INVALID_ARGUMENT` for null pointers, `CML_ERROR_INVALID_DIMENSION`
+for empty or incompatible shapes, and `CML_ERROR_NUMERICAL` for non-finite
+inputs or overflow in the calculation. Gradient dimensions that exceed the
+addressable size return `CML_ERROR_OVERFLOW`. Scratch allocation failures
+return `CML_ERROR_OUT_OF_MEMORY`.
+
+The proposed optimizer API uses generic objective and gradient callbacks with
+borrowed context. The optimizer will own its configuration and scratch state,
+and the result will report the stopping condition, update count, loss, and
+final gradient norm. Batch gradient descent is the next milestone.
+[Optimizer types](include/cml/optimizer.h)
 
 ---
 

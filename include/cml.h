@@ -10,6 +10,8 @@
 #include "cml/statistics.h"
 #include "cml/preprocessing.h"
 #include "cml/dataset.h"
+#include "cml/loss.h"
+#include "cml/optimizer.h"
 #include "cml/linear_regression.h"
 
 #endif /* CML_H */

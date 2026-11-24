@@ -7,11 +7,25 @@
 #include "cml/matrix.h"
 #include "cml/math.h"
 #include "cml/memory.h"
+#include "internal.h"
+
+#include <limits.h>
 
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+
+#if defined(CML_CBLAS_ACCELERATE)
+#if __has_include(<vecLib/cblas_new.h>)
+#define ACCELERATE_NEW_LAPACK
+#include <vecLib/cblas_new.h>
+#else
+#include <vecLib/cblas.h>
+#endif
+#elif defined(CML_CBLAS_OPENBLAS)
+#include <cblas.h>
+#endif
 
 /* ==============================================================================
  * Lifecycle & Memory Management
@@ -541,61 +555,81 @@ CMLMatrix *cml_matrix_negate_new(const CMLMatrix *a) {
  * ------------------------------------------------------------------------------
  */
 
+static void multiply_native(const CMLMatrix *a, const CMLMatrix *b,
+                            double *result) {
+  enum { ROW_BLOCK = 24, INNER_BLOCK = 64, COLUMN_BLOCK = 96 };
+  const size_t m = a->rows, n = a->cols, p = b->cols;
+  for (size_t row = 0; row < m; row += ROW_BLOCK) {
+    size_t row_end = m - row < ROW_BLOCK ? m : row + ROW_BLOCK;
+    for (size_t inner = 0; inner < n; inner += INNER_BLOCK) {
+      size_t inner_end = n - inner < INNER_BLOCK ? n : inner + INNER_BLOCK;
+      for (size_t col = 0; col < p; col += COLUMN_BLOCK) {
+        size_t col_end = p - col < COLUMN_BLOCK ? p : col + COLUMN_BLOCK;
+        for (size_t i = row; i < row_end; ++i) {
+          const double *left = a->data + i * n;
+          double *destination = result + i * p;
+          for (size_t k = inner; k < inner_end; ++k) {
+            double coefficient = left[k];
+            if (coefficient == 0.0)
+              continue;
+            const double *right = b->data + k * p;
+            for (size_t j = col; j < col_end; ++j)
+              destination[j] += coefficient * right[j];
+          }
+        }
+      }
+    }
+  }
+}
+
 CMLStatus cml_matrix_matmul(const CMLMatrix *a, const CMLMatrix *b,
                             CMLMatrix *out) {
-  if (a == NULL || b == NULL || out == NULL) {
+  if (a == NULL || b == NULL || out == NULL)
     return CML_ERROR_INVALID_ARGUMENT;
-  }
-  if (a->cols != b->rows || out->rows != a->rows || out->cols != b->cols) {
+  if (a->cols != b->rows || out->rows != a->rows || out->cols != b->cols)
     return CML_ERROR_INVALID_DIMENSION;
-  }
-
-  size_t m = a->rows;
-  size_t n = a->cols;
-  size_t p = b->cols;
-
-  if (m == 0 || p == 0) {
+  size_t m = a->rows, n = a->cols, p = b->cols;
+  if (m == 0 || p == 0)
     return CML_SUCCESS;
-  }
-
+  CMLStatus status = cml_matrix_storage(out);
+  if (status != CML_SUCCESS)
+    return status;
+  size_t count = m * p;
   if (n == 0) {
-    memset(out->data, 0, m * p * sizeof(double));
+    memset(out->data, 0, count * sizeof(double));
     return CML_SUCCESS;
   }
+  status = cml_matrix_storage(a);
+  if (status == CML_SUCCESS)
+    status = cml_matrix_storage(b);
+  if (status != CML_SUCCESS)
+    return status;
 
-  bool aliased = (out->data == a->data || out->data == b->data);
-  double *dest = out->data;
+  bool aliased = out->data == a->data || out->data == b->data;
+  double *destination =
+      aliased ? cml_malloc(count * sizeof(double)) : out->data;
+  if (destination == NULL)
+    return CML_ERROR_OUT_OF_MEMORY;
 
-  if (aliased) {
-    dest = (double *)cml_calloc(m * p, sizeof(double));
-    if (dest == NULL) {
-      return CML_ERROR_OUT_OF_MEMORY;
-    }
-  } else {
-    memset(dest, 0, m * p * sizeof(double));
-  }
-
-  /* Cache-friendly loop order: i -> k -> j */
-  for (size_t i = 0; i < m; ++i) {
-    size_t a_row_offset = i * n;
-    size_t c_row_offset = i * p;
-    for (size_t k = 0; k < n; ++k) {
-      double aik = a->data[a_row_offset + k];
-      if (aik == 0.0) {
-        continue;
-      }
-      size_t b_row_offset = k * p;
-      for (size_t j = 0; j < p; ++j) {
-        dest[c_row_offset + j] += aik * b->data[b_row_offset + j];
-      }
-    }
+#if defined(CML_CBLAS_ACCELERATE) || defined(CML_CBLAS_OPENBLAS)
+  /* Keep the native kernel's handling of non-finite inputs and small shapes. */
+  if (m >= 64 && n >= 64 && p >= 64 && m <= INT_MAX && n <= INT_MAX &&
+      p <= INT_MAX && cml_values_finite(a->data, m * n) &&
+      cml_values_finite(b->data, n * p)) {
+    cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, (int)m, (int)p,
+                (int)n, 1.0, a->data, (int)n, b->data, (int)p, 0.0, destination,
+                (int)p);
+  } else
+#endif
+  {
+    memset(destination, 0, count * sizeof(double));
+    multiply_native(a, b, destination);
   }
 
   if (aliased) {
-    cml_mem_copy(out->data, dest, m * p * sizeof(double));
-    cml_free(dest);
+    cml_mem_copy(out->data, destination, count * sizeof(double));
+    cml_free(destination);
   }
-
   return CML_SUCCESS;
 }
 

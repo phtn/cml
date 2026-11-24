@@ -931,43 +931,26 @@ Don't create all of these directories on day one. Create them as you need them.
 
 **Your ML library journey**
 
-0/18
+18/18 roadmap milestones implemented. [Phase guides and build commands](../README.md)
 
-Set up C project, compiler, Git and testing
-
-Implement memory utilities and error handling
-
-Build math and random utilities
-
-Implement vector operations
-
-Implement matrix operations
-
-Build statistics functions
-
-Create dataset and CSV utilities
-
-Implement linear regression analytically
-
-Implement gradient descent
-
-Implement logistic regression
-
-Build neural network forward propagation
-
-Implement backpropagation and gradient checking
-
-Implement SGD and Adam
-
-Build evaluation metrics
-
-Implement model serialization
-
-Build additional ML algorithms
-
-Optimize and benchmark
-
-Document the complete library
+- [x] Set up C project, compiler, Git and testing
+- [x] Implement memory utilities and error handling
+- [x] Build math and random utilities
+- [x] Implement vector operations
+- [x] Implement matrix operations
+- [x] Build statistics functions
+- [x] Create dataset and CSV utilities
+- [x] Implement linear regression analytically
+- [x] Implement gradient descent
+- [x] Implement logistic regression
+- [x] Build neural network forward propagation
+- [x] Implement backpropagation and gradient checking
+- [x] Implement SGD and Adam
+- [x] Build evaluation metrics
+- [x] Implement model serialization
+- [x] Build additional ML algorithms
+- [x] Optimize and benchmark
+- [x] Document the complete library
 
 # **Suggested pace**
 

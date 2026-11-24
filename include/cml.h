@@ -20,5 +20,6 @@
 #include "cml/multiclass.h"
 #include "cml/network.h"
 #include "cml/serialization.h"
+#include "cml/neighbors.h"
 
 #endif /* CML_H */

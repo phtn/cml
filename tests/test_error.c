@@ -156,7 +156,10 @@ static void test_log_basic(void) {
   TEST("NULL format string does not crash", 1);
 
   /* Empty format string */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-zero-length"
   cml_log(CML_LOG_INFO, "");
+#pragma GCC diagnostic pop
   TEST("empty format string does not crash", 1);
 
   /* Very long message (triggers truncation path) */

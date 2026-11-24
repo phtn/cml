@@ -15,7 +15,11 @@ CML
 ├── Regression    → closed-form simple linear regression (Phase 5)
 ├── Loss          → regression cost functions (Phase 6)
 ├── Classification → binary label and dataset validation (Phase 7)
-├── Activation    → scalar and vector sigmoid (Phase 7)
+├── Activation    → scalar and vector sigmoid, softmax (Phase 7)
+├── Network       → dense inference and backpropagation (Phases 8–9)
+├── Optimizer     → mini-batches, adaptive updates, early stopping (Phase 10)
+├── Models        → metrics and versioned persistence (Phase 11)
+├── Neighbors     → K-nearest neighbors and K-means (Phase 12)
 └── ...
 ```
 
@@ -48,6 +52,7 @@ make test-network
 make test-backpropagation
 make test-advanced-optimizers
 make test-models
+make test-neighbors
 
 # Run example programs
 make example
@@ -60,7 +65,51 @@ make example-model-workflow
 
 # Run with AddressSanitizer & UndefinedBehaviorSanitizer
 make sanitize
+
+# Run matrix and training benchmarks
+make benchmark
 ```
+
+---
+
+## Build and link the library
+
+Make produces `build/libcml.a`. Include `<cml.h>` and link it with the C math
+library. CMake can build and install the same library on POSIX systems.
+
+```sh
+cc -std=c11 -Iinclude my_program.c build/libcml.a -lm -o my_program
+cmake -S . -B build/cmake -DCMAKE_BUILD_TYPE=Release
+cmake --build build/cmake
+ctest --test-dir build/cmake --output-on-failure
+```
+
+Available phase guides are
+[0](docs/PHASE_0.md), [1](docs/PHASE_1.md), [2](docs/PHASE_2.md),
+[3](docs/PHASE_3.md), [4](docs/PHASE_4.md), [5](docs/PHASE_5.md),
+[6](docs/PHASE_6.md), [7](docs/PHASE_7.md), [8](docs/PHASE_8.md),
+[9](docs/PHASE_9.md), [10](docs/PHASE_10.md), [11](docs/PHASE_11.md), and
+[12](docs/PHASE_12.md). [Project roadmap](docs/GUIDE2ML.md)
+
+---
+
+## Phase 12 · Performance and Advanced Algorithms
+
+The native matrix kernel uses cache blocking. For larger finite inputs,
+optional OpenBLAS or Apple Accelerate builds use CBLAS. K-nearest neighbors
+copies its training data, and K-means uses seeded initialization and
+deterministic cluster assignment. [Phase 12 guide](docs/PHASE_12.md)
+
+```sh
+# Apple Accelerate on macOS
+make BUILD_DIR=build/accelerate BLAS=accelerate benchmark
+
+# OpenBLAS available through pkg-config
+OPENBLAS_NUM_THREADS=1 make BUILD_DIR=build/openblas BLAS=openblas benchmark
+```
+
+Use `-DCML_BLAS=accelerate` or `-DCML_BLAS=openblas` for CMake. The
+training benchmark accepts `--stress` to include one million samples.
 
 ---
 

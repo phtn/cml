@@ -1,0 +1,33 @@
+name: CML validation
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  make:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - run: make -j2 all test example
+      - run: make -j2 sanitize
+
+  openblas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - run: sudo apt-get update && sudo apt-get install -y libopenblas-dev pkg-config
+      - run: cmake -S . -B build/cmake -DCMAKE_BUILD_TYPE=Release -DCML_BLAS=openblas
+      - run: cmake --build build/cmake --parallel 2
+      - run: ctest --test-dir build/cmake --output-on-failure
+      - run: OPENBLAS_NUM_THREADS=1 build/cmake/benchmark_matrix

@@ -41,6 +41,7 @@ typedef enum CMLStatus {
   CML_ERROR_NUMERICAL = 7,
   CML_ERROR_NOT_IMPLEMENTED = 8,
   CML_ERROR_UNKNOWN = 9,
+  CML_ERROR_CANCELLED = 10,
 } CMLStatus;
 
 /* ==============================================================================

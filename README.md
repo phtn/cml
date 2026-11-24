@@ -38,6 +38,7 @@ make test-preprocessing
 make test-dataset
 make test-linear-regression
 make test-loss
+make test-optimizer
 
 # Run example programs
 make example
@@ -73,18 +74,19 @@ inputs or overflow in the calculation. Gradient dimensions that exceed the
 addressable size return `CML_ERROR_OVERFLOW`. Scratch allocation failures
 return `CML_ERROR_OUT_OF_MEMORY`.
 
-The proposed optimizer API uses generic objective and gradient callbacks with
-borrowed context. The optimizer will own its configuration and scratch state,
-and the result will report the stopping condition, update count, loss, and
-final gradient norm. Batch gradient descent is the next milestone.
+The optimizer supports generic objectives, reproducible full-batch, stochastic,
+and mini-batch training, momentum, learning-rate schedules, gradient clipping,
+and early stopping. A training observer receives epoch metrics and candidate
+parameters. The central-difference checker verifies analytical gradients.
 [Optimizer types](include/cml/optimizer.h)
 
 ---
 
 ## Phase 5 · Simple Linear Regression
 
-Fit a one-feature model with `cml_linear_regression_fit` using an `N × 1`
-feature matrix and a target vector of length `N`. The model owns its
+Fit a model with `cml_linear_regression_fit` using an `N × D` feature
+matrix and a target vector of length `N`. Multiple features use Householder
+QR and require a full-rank design. The model owns its
 coefficients and borrows the training data for the duration of the fit.
 Use `cml_linear_regression_predict` with a one-element feature vector after a
 successful fit. A constant feature yields a zero slope and the target mean.

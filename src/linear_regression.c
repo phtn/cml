@@ -1,5 +1,9 @@
 #include "cml/linear_regression.h"
 #include "cml/memory.h"
+#include "internal.h"
+
+#include <float.h>
+#include <string.h>
 
 #include <math.h>
 #include <stdint.h>
@@ -11,7 +15,7 @@ struct CMLLinearRegression {
 };
 
 CMLLinearRegression *cml_linear_regression_create(size_t num_features) {
-  if (num_features != 1) {
+  if (num_features == 0) {
     return NULL;
   }
 
@@ -54,21 +58,112 @@ static double scaled_origin(double min, double max, int exponent) {
   return 0.0;
 }
 
+/* Householder QR on the scaled, augmented design [1 X | y]. */
+static CMLStatus fit_multiple(CMLLinearRegression *model,
+                              const CMLMatrix *features,
+                              const CMLVector *targets) {
+  size_t rows = features->rows, cols = features->cols;
+  if (rows <= cols)
+    return CML_ERROR_INVALID_DIMENSION;
+  if (!cml_values_finite(features->data, rows * cols) ||
+      !cml_values_finite(targets->data, rows))
+    return CML_ERROR_NUMERICAL;
+  size_t parameters = cols + 1;
+  size_t width = parameters + 1;
+  if (rows > SIZE_MAX / sizeof(double) / width)
+    return CML_ERROR_OVERFLOW;
+  CMLMatrix *design = cml_matrix_create(rows, width);
+  CMLVector *scales = cml_vector_create(width);
+  CMLVector *solution = cml_vector_create(parameters);
+  CMLStatus status = CML_ERROR_OUT_OF_MEMORY;
+  if (design == NULL || scales == NULL || solution == NULL)
+    goto done;
+  scales->data[0] = 1.0;
+  for (size_t i = 0; i < rows; ++i) {
+    double *row = design->data + i * width;
+    row[0] = 1.0;
+    memcpy(row + 1, features->data + i * cols, cols * sizeof(double));
+    row[parameters] = targets->data[i];
+    for (size_t j = 1; j < width; ++j)
+      scales->data[j] = fmax(scales->data[j], fabs(row[j]));
+  }
+  for (size_t j = 1; j < width; ++j) {
+    if (scales->data[j] == 0.0)
+      scales->data[j] = 1.0;
+    for (size_t i = 0; i < rows; ++i)
+      design->data[i * width + j] /= scales->data[j];
+  }
+
+  status = CML_ERROR_NUMERICAL;
+  double tolerance = DBL_EPSILON * (double)rows * sqrt((double)rows);
+  for (size_t j = 0; j < parameters; ++j) {
+    double norm = 0.0;
+    for (size_t i = j; i < rows; ++i)
+      norm = hypot(norm, design->data[i * width + j]);
+    if (norm <= tolerance)
+      goto done;
+    double *diagonal = &design->data[j * width + j];
+    double replacement = -copysign(norm, *diagonal);
+    *diagonal -= replacement;
+    double vector_norm = 0.0;
+    for (size_t i = j; i < rows; ++i)
+      vector_norm = hypot(vector_norm, design->data[i * width + j]);
+    for (size_t i = j; i < rows; ++i)
+      design->data[i * width + j] /= vector_norm;
+    for (size_t k = j + 1; k < width; ++k) {
+      double projection = 0.0;
+      for (size_t i = j; i < rows; ++i)
+        projection += design->data[i * width + j] * design->data[i * width + k];
+      for (size_t i = j; i < rows; ++i)
+        design->data[i * width + k] -=
+            2.0 * projection * design->data[i * width + j];
+    }
+    *diagonal = replacement;
+  }
+
+  for (size_t j = parameters; j-- > 0;) {
+    const double *row = design->data + j * width;
+    double value = row[parameters];
+    for (size_t k = j + 1; k < parameters; ++k)
+      value = fma(-row[k], solution->data[k], value);
+    solution->data[j] = value / row[j];
+  }
+  int target_exponent;
+  double target_fraction = frexp(scales->data[parameters], &target_exponent);
+  for (size_t j = 0; j < parameters; ++j) {
+    int feature_exponent;
+    double feature_fraction = frexp(scales->data[j], &feature_exponent);
+    solution->data[j] =
+        scalbn(solution->data[j] * (target_fraction / feature_fraction),
+               target_exponent - feature_exponent);
+  }
+  CMLVector weights = {solution->data + 1, cols, cols};
+  status =
+      cml_linear_regression_set_parameters(model, &weights, solution->data[0]);
+done:
+  cml_vector_destroy(solution);
+  cml_vector_destroy(scales);
+  cml_matrix_destroy(design);
+  return status;
+}
+
 CMLStatus cml_linear_regression_fit(CMLLinearRegression *model,
                                     const CMLMatrix *features,
                                     const CMLVector *targets) {
   if (model == NULL || features == NULL || targets == NULL) {
     return CML_ERROR_INVALID_ARGUMENT;
   }
-  size_t count = features->rows;
-  if (count == 0 || features->cols != model->weights->size ||
-      targets->size != count || features->capacity < count ||
-      targets->capacity < count) {
+  if (features->cols != model->weights->size)
     return CML_ERROR_INVALID_DIMENSION;
-  }
-  if (features->data == NULL || targets->data == NULL) {
-    return CML_ERROR_INVALID_ARGUMENT;
-  }
+  CMLStatus status = cml_matrix_storage(features);
+  if (status != CML_SUCCESS)
+    return status;
+  size_t count = features->rows;
+  status = cml_vector_storage(targets, count);
+  if (status != CML_SUCCESS)
+    return status;
+  if (features->cols > 1)
+    return fit_multiple(model, features, targets);
 
   const double *x = features->data;
   const double *y = targets->data;
@@ -142,12 +237,12 @@ CMLStatus cml_linear_regression_predict(const CMLLinearRegression *model,
   if (features->data == NULL) {
     return CML_ERROR_INVALID_ARGUMENT;
   }
-  if (!isfinite(features->data[0])) {
+  if (!cml_values_finite(features->data, features->size)) {
     return CML_ERROR_NUMERICAL;
   }
 
-  double prediction =
-      fma(model->weights->data[0], features->data[0], model->intercept);
+  double prediction = cml_affine(features->data, model->weights->data,
+                                 features->size, model->intercept);
   if (!isfinite(prediction)) {
     return CML_ERROR_NUMERICAL;
   }
@@ -170,7 +265,7 @@ CMLStatus cml_linear_regression_get_parameters(const CMLLinearRegression *model,
     return CML_ERROR_INVALID_ARGUMENT;
   }
 
-  weights->data[0] = model->weights->data[0];
+  memcpy(weights->data, model->weights->data, weights->size * sizeof(double));
   *intercept = model->intercept;
   return CML_SUCCESS;
 }
@@ -247,5 +342,132 @@ CMLStatus cml_linear_regression_mse_gradient(const CMLMatrix *features,
     cml_mem_copy(out->data, gradient, parameter_count * sizeof(*gradient));
   }
   cml_free(gradient);
+  return status;
+}
+
+size_t cml_linear_regression_feature_count(const CMLLinearRegression *model) {
+  return model == NULL ? 0 : model->weights->size;
+}
+
+CMLStatus cml_linear_regression_set_parameters(CMLLinearRegression *model,
+                                               const CMLVector *weights,
+                                               double intercept) {
+  if (model == NULL)
+    return CML_ERROR_INVALID_ARGUMENT;
+  CMLStatus status = cml_vector_storage(weights, model->weights->size);
+  if (status != CML_SUCCESS)
+    return status;
+  if (!isfinite(intercept) || !cml_values_finite(weights->data, weights->size))
+    return CML_ERROR_NUMERICAL;
+  memcpy(model->weights->data, weights->data, weights->size * sizeof(double));
+  model->intercept = intercept;
+  model->trained = true;
+  return CML_SUCCESS;
+}
+
+CMLStatus cml_linear_regression_predict_batch(const CMLLinearRegression *model,
+                                              const CMLMatrix *features,
+                                              CMLVector *out) {
+  if (!cml_linear_regression_is_trained(model))
+    return CML_ERROR_INVALID_ARGUMENT;
+  CMLStatus status = cml_matrix_storage(features);
+  if (status != CML_SUCCESS)
+    return status;
+  if (features->cols != model->weights->size)
+    return CML_ERROR_INVALID_DIMENSION;
+  status = cml_vector_storage(out, features->rows);
+  if (status != CML_SUCCESS)
+    return status;
+
+  CMLVector *predictions = cml_vector_create(features->rows);
+  if (predictions == NULL)
+    return CML_ERROR_OUT_OF_MEMORY;
+  for (size_t i = 0; i < features->rows && status == CML_SUCCESS; ++i) {
+    CMLVector row = {features->data + i * features->cols, features->cols,
+                     features->cols};
+    status = cml_linear_regression_predict(model, &row, &predictions->data[i]);
+  }
+  if (status == CML_SUCCESS)
+    memcpy(out->data, predictions->data, out->size * sizeof(double));
+  cml_vector_destroy(predictions);
+  return status;
+}
+
+typedef struct {
+  const CMLMatrix *features;
+  const CMLVector *targets;
+} RegressionData;
+
+static CMLStatus regression_batch(const CMLVector *p, const size_t *indices,
+                                  size_t count, void *context, double *loss,
+                                  CMLVector *gradient) {
+  const RegressionData *data = context;
+  size_t cols = data->features->cols;
+  double square_mean = 0.0;
+  if (gradient != NULL)
+    cml_vector_fill(gradient, 0.0);
+  for (size_t i = 0; i < count; ++i) {
+    size_t row_index = indices == NULL ? i : indices[i];
+    const double *row = data->features->data + row_index * cols;
+    double error = cml_affine(row, p->data, cols, p->data[cols]) -
+                   data->targets->data[row_index];
+    if (!isfinite(error))
+      return CML_ERROR_NUMERICAL;
+    if (loss != NULL)
+      square_mean = fma(error / (double)count, error, square_mean);
+    if (gradient != NULL) {
+      double derivative = error * (2.0 / (double)count);
+      for (size_t j = 0; j < cols; ++j)
+        gradient->data[j] = fma(derivative, row[j], gradient->data[j]);
+      gradient->data[cols] += derivative;
+    }
+  }
+  if (loss != NULL)
+    *loss = square_mean;
+  return CML_SUCCESS;
+}
+
+static CMLStatus validate_regression_data(const RegressionData *data,
+                                          size_t features) {
+  CMLStatus status = cml_matrix_storage(data->features);
+  if (status != CML_SUCCESS)
+    return status;
+  if (data->features->cols != features)
+    return CML_ERROR_INVALID_DIMENSION;
+  return cml_vector_storage(data->targets, data->features->rows);
+}
+
+CMLStatus cml_linear_regression_fit_iterative(
+    CMLLinearRegression *model, const CMLMatrix *features,
+    const CMLVector *targets, const CMLMatrix *validation_features,
+    const CMLVector *validation_targets, const CMLTrainingOptions *options,
+    CMLTrainingResult *result) {
+  if (model == NULL ||
+      (validation_features == NULL) != (validation_targets == NULL))
+    return CML_ERROR_INVALID_ARGUMENT;
+  size_t cols = model->weights->size;
+  RegressionData training = {features, targets};
+  RegressionData validation = {validation_features, validation_targets};
+  CMLStatus status = validate_regression_data(&training, cols);
+  if (status == CML_SUCCESS && validation_features != NULL)
+    status = validate_regression_data(&validation, cols);
+  if (status != CML_SUCCESS)
+    return status;
+
+  CMLVector *parameters = cml_vector_create(cols + 1);
+  if (parameters == NULL)
+    return CML_ERROR_OUT_OF_MEMORY;
+  memcpy(parameters->data, model->weights->data, cols * sizeof(double));
+  parameters->data[cols] = model->intercept;
+  status =
+      cml_train(parameters, regression_batch, features->rows, &training,
+                validation_features == NULL ? 0 : validation_features->rows,
+                &validation, options, result);
+  if (status == CML_SUCCESS) {
+    CMLVector weights = {parameters->data, cols, cols};
+    status = cml_linear_regression_set_parameters(model, &weights,
+                                                  parameters->data[cols]);
+  }
+  cml_vector_destroy(parameters);
   return status;
 }

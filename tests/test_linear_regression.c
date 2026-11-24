@@ -93,7 +93,6 @@ static void test_errors(void) {
   double value = -1.0;
 
   assert(cml_linear_regression_create(0) == NULL);
-  assert(cml_linear_regression_create(2) == NULL);
   assert(!cml_linear_regression_is_trained(NULL));
   cml_linear_regression_destroy(NULL);
 

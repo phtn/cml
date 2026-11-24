@@ -51,6 +51,8 @@ const char *cml_status_string(CMLStatus status) {
     return "Numerical error";
   case CML_ERROR_NOT_IMPLEMENTED:
     return "Not implemented";
+  case CML_ERROR_CANCELLED:
+    return "Operation cancelled";
   case CML_ERROR_UNKNOWN:
     return "Unknown error";
   default:

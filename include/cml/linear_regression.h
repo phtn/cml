@@ -2,12 +2,12 @@
 #define CML_LINEAR_REGRESSION_H
 
 #include "cml/matrix.h"
+#include "cml/optimizer.h"
 
 typedef struct CMLLinearRegression CMLLinearRegression;
 
-/* Create an untrained model that owns its coefficients. Only one feature is
- * supported. Returns NULL for an unsupported feature count or failed
- * allocation.
+/* Create an untrained model that owns its coefficients. Returns NULL for
+ * zero features or failed allocation.
  */
 CMLLinearRegression *cml_linear_regression_create(size_t num_features);
 
@@ -19,7 +19,8 @@ bool cml_linear_regression_is_trained(const CMLLinearRegression *model);
 
 /* Fit by ordinary least squares with an intercept. Each row of features is a
  * sample, and targets must contain one value per row. At least one sample is
- * required. Constant features yield a zero weight and the target mean.
+ * required. A constant single feature yields a zero weight and the target
+ * mean. Multiple features require a full-rank design with an intercept.
  * The model borrows the training inputs for this call. A failed fit preserves
  * the previous model state. Non-finite data or coefficients that cannot be
  * represented return CML_ERROR_NUMERICAL.
@@ -54,5 +55,21 @@ CMLStatus cml_linear_regression_mse_gradient(const CMLMatrix *features,
                                              const CMLVector *targets,
                                              const CMLVector *parameters,
                                              CMLVector *out);
+
+/* Fit by minimizing MSE. A failed or cancelled run preserves the model. */
+CMLStatus cml_linear_regression_fit_iterative(
+    CMLLinearRegression *model, const CMLMatrix *features,
+    const CMLVector *targets, const CMLMatrix *validation_features,
+    const CMLVector *validation_targets, const CMLTrainingOptions *options,
+    CMLTrainingResult *result);
+
+size_t cml_linear_regression_feature_count(const CMLLinearRegression *model);
+/* Install a copy of the fitted coefficients after validating all values. */
+CMLStatus cml_linear_regression_set_parameters(CMLLinearRegression *model,
+                                               const CMLVector *weights,
+                                               double intercept);
+CMLStatus cml_linear_regression_predict_batch(const CMLLinearRegression *model,
+                                              const CMLMatrix *features,
+                                              CMLVector *out);
 
 #endif /* CML_LINEAR_REGRESSION_H */

@@ -895,3 +895,23 @@ Start by designing the API. Submit:
 4. The mathematical formulas you plan to implement for MSE and gradients
 5. Your error-handling strategy
 6. Your tests for loss functions and gradient calculations
+
+
+## Running the implementation
+
+Run the optimizer, gradient checking, and closed-form comparison tests with
+`make test-optimizer`. The generic optimizer accepts separate objective and
+gradient callbacks. For data-based training, `cml_train` supplies complete or
+partial batches of indices to a callback, with deterministic shuffling.
+
+An epoch processes each sample once unless the update limit is reached first.
+The training observer receives losses, learning rate, norms, and borrowed
+parameters. It can collect history, write a CSV, checkpoint a best candidate,
+or cancel. Validation keeps the lowest-loss parameters, including epoch zero.
+Patience counts epochs without an improvement above the configured minimum.
+
+`cml_linear_regression_fit_iterative` uses mean squared error with parameters
+in weight-then-intercept order. Closed-form multiple regression uses scaled
+Householder QR and reports a numerical error for a rank-deficient design.
+Both fits preserve existing parameters on failure. Gradient checking uses
+central differences with a step proportional to each parameter's magnitude.

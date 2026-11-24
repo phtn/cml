@@ -2,6 +2,7 @@
 #define CML_NETWORK_H
 
 #include "cml/matrix.h"
+#include "cml/optimizer.h"
 
 #include <stdint.h>
 
@@ -39,5 +40,35 @@ CMLStatus cml_network_predict(const CMLNetwork *network, const CMLVector *input,
                               CMLVector *out);
 CMLStatus cml_network_predict_batch(const CMLNetwork *network,
                                     const CMLMatrix *inputs, CMLMatrix *out);
+
+typedef enum CMLNetworkLoss {
+  CML_NETWORK_MSE,
+  CML_NETWORK_BINARY_CROSS_ENTROPY,
+  CML_NETWORK_CATEGORICAL_CROSS_ENTROPY,
+} CMLNetworkLoss;
+
+/* Targets are an input-row by output-unit matrix. Either output may be NULL
+ * when the other is supplied. NULL parameters uses the model's current values.
+ */
+CMLStatus cml_network_objective(const CMLNetwork *network,
+                                const CMLMatrix *inputs,
+                                const CMLMatrix *targets, CMLNetworkLoss loss,
+                                const CMLVector *parameters, double *out_loss,
+                                CMLVector *out_gradient);
+CMLStatus cml_network_check_gradient(const CMLNetwork *network,
+                                     const CMLMatrix *inputs,
+                                     const CMLMatrix *targets,
+                                     CMLNetworkLoss loss, double step,
+                                     double abs_tolerance, double rel_tolerance,
+                                     CMLGradientCheckResult *out);
+
+/* A successful run installs the returned parameters. Failed or cancelled runs
+ * preserve the current network. Validation inputs and targets are optional.
+ */
+CMLStatus
+cml_network_train(CMLNetwork *network, const CMLMatrix *inputs,
+                  const CMLMatrix *targets, const CMLMatrix *validation_inputs,
+                  const CMLMatrix *validation_targets, CMLNetworkLoss loss,
+                  const CMLTrainingOptions *options, CMLTrainingResult *result);
 
 #endif

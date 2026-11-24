@@ -45,6 +45,7 @@ make test-classification
 make test-activation
 make test-logistic
 make test-network
+make test-backpropagation
 
 # Run example programs
 make example
@@ -52,10 +53,20 @@ make example-vector
 make example-matrix
 make example-analysis
 make example-linear-regression
+make example-xor
 
 # Run with AddressSanitizer & UndefinedBehaviorSanitizer
 make sanitize
 ```
+
+---
+
+## Phase 9 · Backpropagation
+
+Train dense networks with mean squared error, sigmoid binary cross-entropy,
+or softmax categorical cross-entropy. The central-difference checker verifies
+the analytical derivatives. Run `make example-xor` to see a two-layer network
+learn the four XOR cases. [Phase 9 guide](docs/PHASE_9.md)
 
 ---
 

@@ -88,6 +88,30 @@ typedef struct CMLTrainingRecord {
 typedef bool (*CMLTrainingObserver)(const CMLTrainingRecord *record,
                                     const CMLVector *parameters, void *context);
 
+typedef enum CMLOptimizerMethod {
+  CML_OPTIMIZER_SGD,
+  CML_OPTIMIZER_ADAGRAD,
+  CML_OPTIMIZER_RMSPROP,
+  CML_OPTIMIZER_ADAM,
+} CMLOptimizerMethod;
+
+typedef struct CMLTrainingHistory {
+  CMLTrainingRecord *records;
+  size_t size;
+  size_t capacity;
+} CMLTrainingHistory;
+
+/* Release storage for a zero-initialized history and reset it to empty. */
+void cml_training_history_destroy(CMLTrainingHistory *history);
+
+/* Save or inspect a candidate. A checkpoint error stops the run and its
+ * status is returned. With no validation set, training loss selects
+ * checkpoints.
+ */
+typedef CMLStatus (*CMLTrainingCheckpoint)(const CMLTrainingRecord *record,
+                                           const CMLVector *parameters,
+                                           void *context);
+
 typedef struct CMLTrainingOptions {
   CMLOptimizerConfig optimizer;
   size_t epochs;
@@ -106,6 +130,11 @@ typedef struct CMLTrainingOptions {
   size_t record_every;        /* zero is equivalent to one */
   CMLTrainingObserver observer;
   void *observer_context;
+  CMLOptimizerMethod method;
+  double beta1, beta2, epsilon; /* adaptive optimizers */
+  CMLTrainingHistory *history;  /* optional, zero-initialized; records append */
+  CMLTrainingCheckpoint checkpoint;
+  void *checkpoint_context;
 } CMLTrainingOptions;
 
 typedef struct CMLTrainingResult {

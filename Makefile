@@ -28,6 +28,7 @@ TEST_ACTIVATION     = $(BUILD_DIR)/test_activation
 TEST_LOGISTIC       = $(BUILD_DIR)/test_logistic
 TEST_NETWORK        = $(BUILD_DIR)/test_network
 TEST_BACKPROP       = $(BUILD_DIR)/test_backpropagation
+TEST_ADVANCED       = $(BUILD_DIR)/test_advanced_optimizers
 
 EXAMPLE_VEC = $(BUILD_DIR)/vector_example
 EXAMPLE_MAT = $(BUILD_DIR)/matrix_example
@@ -35,7 +36,7 @@ EXAMPLE_DAT = $(BUILD_DIR)/data_analysis_example
 EXAMPLE_REG = $(BUILD_DIR)/linear_regression_example
 EXAMPLE_XOR = $(BUILD_DIR)/xor_example
 
-.PHONY: all clean test test-memory test-error test-vector test-matrix test-statistics test-preprocessing test-dataset test-linear-regression test-loss test-optimizer test-classification test-activation test-logistic test-network test-backpropagation example example-vector example-matrix example-analysis example-linear-regression example-xor sanitize
+.PHONY: all clean test test-memory test-error test-vector test-matrix test-statistics test-preprocessing test-dataset test-linear-regression test-loss test-optimizer test-classification test-activation test-logistic test-network test-backpropagation test-advanced-optimizers example example-vector example-matrix example-analysis example-linear-regression example-xor sanitize
 
 all: $(TARGET)
 
@@ -46,7 +47,7 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 # --- Test targets ---
-test: test-memory test-error test-vector test-matrix test-statistics test-preprocessing test-dataset test-linear-regression test-loss test-optimizer test-classification test-activation test-logistic test-network test-backpropagation
+test: test-memory test-error test-vector test-matrix test-statistics test-preprocessing test-dataset test-linear-regression test-loss test-optimizer test-classification test-activation test-logistic test-network test-backpropagation test-advanced-optimizers
 
 test-memory: $(TEST_MEMORY)
 	./$(TEST_MEMORY)
@@ -136,6 +137,12 @@ test-backpropagation: $(TEST_BACKPROP)
 	./$(TEST_BACKPROP)
 
 $(TEST_BACKPROP): $(TEST_DIR)/test_backpropagation.c $(LIB_SRCS) | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+
+test-advanced-optimizers: $(TEST_ADVANCED)
+	./$(TEST_ADVANCED)
+
+$(TEST_ADVANCED): $(TEST_DIR)/test_advanced_optimizers.c $(LIB_SRCS) | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 # --- Example targets ---

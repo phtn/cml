@@ -46,6 +46,7 @@ make test-activation
 make test-logistic
 make test-network
 make test-backpropagation
+make test-advanced-optimizers
 
 # Run example programs
 make example
@@ -58,6 +59,15 @@ make example-xor
 # Run with AddressSanitizer & UndefinedBehaviorSanitizer
 make sanitize
 ```
+
+---
+
+## Phase 10 · Advanced Training
+
+Select SGD, classical momentum, AdaGrad, RMSProp, or Adam. Training supports
+mini-batches, seeded shuffling, learning-rate schedules, validation stopping,
+clipping, epoch history, and a best-model checkpoint callback.
+[Phase 10 guide](docs/PHASE_10.md)
 
 ---
 

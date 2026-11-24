@@ -1,4 +1,6 @@
 #include "cml/loss.h"
+#include "cml/classification.h"
+#include "internal.h"
 
 #include <float.h>
 #include <math.h>
@@ -95,4 +97,48 @@ CMLStatus cml_loss_rmse(const CMLVector *actual, const CMLVector *predicted,
 CMLStatus cml_loss_mae(const CMLVector *actual, const CMLVector *predicted,
                        double *out) {
   return calculate_loss(actual, predicted, LOSS_MAE, out);
+}
+
+static CMLStatus bce(const CMLVector *actual, const CMLVector *predicted,
+                     double epsilon, bool logits, double *out) {
+  if (out == NULL)
+    return CML_ERROR_INVALID_ARGUMENT;
+  CMLStatus status = cml_classification_validate_binary_labels(actual, NULL);
+  if (status != CML_SUCCESS)
+    return status;
+  status = cml_vector_storage(predicted, actual->size);
+  if (status != CML_SUCCESS)
+    return status;
+  double mean = 0.0;
+  for (size_t i = 0; i < actual->size; ++i) {
+    double prediction = predicted->data[i], label = actual->data[i];
+    if (!isfinite(prediction))
+      return CML_ERROR_NUMERICAL;
+    double error;
+    if (logits) {
+      error = cml_bce_logit(label, prediction);
+    } else {
+      if (prediction < 0.0 || prediction > 1.0)
+        return CML_ERROR_INVALID_ARGUMENT;
+      double correct = label == 1.0 ? prediction : 1.0 - prediction;
+      double wrong = label == 1.0 ? 1.0 - prediction : prediction;
+      error = wrong < 0.5 ? -log1p(-fmax(epsilon, wrong))
+                          : -log(fmax(epsilon, correct));
+    }
+    mean += (error - mean) / (double)(i + 1);
+  }
+  *out = mean;
+  return CML_SUCCESS;
+}
+
+CMLStatus cml_loss_bce(const CMLVector *actual, const CMLVector *probabilities,
+                       double epsilon, double *out) {
+  if (!isfinite(epsilon) || epsilon <= 0.0 || epsilon > 0.5)
+    return CML_ERROR_INVALID_ARGUMENT;
+  return bce(actual, probabilities, epsilon, false, out);
+}
+
+CMLStatus cml_loss_bce_logits(const CMLVector *actual, const CMLVector *logits,
+                              double *out) {
+  return bce(actual, logits, 0.0, true, out);
 }

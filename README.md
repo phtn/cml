@@ -14,6 +14,8 @@ CML
 ├── Dataset       → datasets, shuffling, train/test splitting (Phase 4)
 ├── Regression    → closed-form simple linear regression (Phase 5)
 ├── Loss          → regression cost functions (Phase 6)
+├── Classification → binary label and dataset validation (Phase 7)
+├── Activation    → scalar and vector sigmoid (Phase 7)
 └── ...
 ```
 
@@ -39,6 +41,9 @@ make test-dataset
 make test-linear-regression
 make test-loss
 make test-optimizer
+make test-classification
+make test-activation
+make test-logistic
 
 # Run example programs
 make example
@@ -50,6 +55,38 @@ make example-linear-regression
 # Run with AddressSanitizer & UndefinedBehaviorSanitizer
 make sanitize
 ```
+
+---
+
+## Phase 7 · Classification Foundation and Sigmoid
+
+Binary targets live in `CMLDataset.y` as exact `0.0` and `1.0` values. The
+classification validators borrow the data and can report both class counts.
+Imbalanced and single-class datasets are valid at this stage. An empty or
+inconsistent shape returns `CML_ERROR_INVALID_DIMENSION`. Missing storage or
+a finite label outside the encoding returns `CML_ERROR_INVALID_ARGUMENT`.
+NaN and infinity in labels or features return `CML_ERROR_NUMERICAL`.
+Unaddressable dimensions return `CML_ERROR_OVERFLOW`.
+[Classification API](include/cml/classification.h)
+
+The sigmoid computes $1/(1+e^{-z})$ for nonnegative logits and
+$e^z/(1+e^z)$ for negative logits, so the exponential always receives a
+nonpositive argument for real inputs. The scalar and vector forms propagate
+NaN and map negative and positive infinity to `0.0` and `1.0`. The vector
+form can write to an equal-size output or update the input in place.
+[Activation API](include/cml/activation.h)
+
+### Logistic regression and evaluation
+
+The binary classifier owns its weights and bias, stored in a single parameter
+vector. Creation initializes zero parameters and a threshold of `0.5`. A
+successful fit or parameter installation makes it ready to predict. The model
+supports threshold changes, cloning, batch prediction, class weighting, and L1
+and L2 penalties. Binary metrics provide a confusion matrix and six rates. ROC
+evaluation groups tied scores and reports AUC and the best F1 threshold.
+
+Multiclass classification supports one-vs-rest and joint softmax training with
+integer class indices. [Phase 7 guide](docs/PHASE_7.md)
 
 ---
 

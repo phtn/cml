@@ -25,4 +25,12 @@ CMLStatus cml_loss_rmse(const CMLVector *actual, const CMLVector *predicted,
 CMLStatus cml_loss_mae(const CMLVector *actual, const CMLVector *predicted,
                        double *out);
 
+/* BCE over exact binary labels. For probabilities in [0,1], epsilon in
+ * (0,0.5] clips both tails. The logit variant accepts finite logits.
+ */
+CMLStatus cml_loss_bce(const CMLVector *actual, const CMLVector *probabilities,
+                       double epsilon, double *out);
+CMLStatus cml_loss_bce_logits(const CMLVector *actual, const CMLVector *logits,
+                              double *out);
+
 #endif /* CML_LOSS_H */

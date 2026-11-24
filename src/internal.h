@@ -40,6 +40,11 @@ static inline double cml_affine(const double *x, const double *weights,
   return bias;
 }
 
+static inline double cml_bce_logit(double label, double logit) {
+  double signed_error = label == 1.0 ? -logit : logit;
+  return fmax(signed_error, 0.0) + log1p(exp(-fabs(signed_error)));
+}
+
 /* SplitMix64 accepts every seed, including zero. */
 static inline uint64_t cml_random_next(uint64_t *state) {
   uint64_t z = (*state += UINT64_C(0x9e3779b97f4a7c15));

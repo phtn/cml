@@ -13,5 +13,10 @@
 #include "cml/loss.h"
 #include "cml/optimizer.h"
 #include "cml/linear_regression.h"
+#include "cml/classification.h"
+#include "cml/activation.h"
+#include "cml/logistic_regression.h"
+#include "cml/metrics.h"
+#include "cml/multiclass.h"
 
 #endif /* CML_H */

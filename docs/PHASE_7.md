@@ -1219,3 +1219,18 @@ Don't implement the entire classifier at once. We'll review your API first, then
 Phase 7 is a major milestone: after completing it, you'll have implemented a complete supervised-learning workflow for both regression and classification **without relying on a machine-learning framework**.
 
 And importantly, your Phase 6 optimizer, matrix engine, preprocessing utilities, and statistics module will now work together as real components of a machine-learning system.
+
+
+## Running the implementation
+
+Run `make test-classification test-activation test-logistic` to verify input
+validation, numerical stability, analytical gradients, binary prediction, ROC,
+and both multiclass strategies. The binary model's parameter vector contains
+the feature weights followed by the bias. A score equal to the configured
+threshold is positive. For OvR, scores are independent probabilities, and the
+predicted class is the largest logit. For softmax, scores sum to one.
+
+Validate and split the input data before fitting preprocessing. Train with an
+optional validation split, tune the threshold on that split, and report metrics
+on held-out test data. Model serialization and multiclass summary metrics are
+covered in Phase 11.
